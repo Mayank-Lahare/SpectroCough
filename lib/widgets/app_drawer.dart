@@ -8,15 +8,53 @@ import '../screens/reports_screen.dart';
 import '../screens/health_ai_screen.dart';
 import '../screens/about_screen.dart';
 import '../screens/login_screen.dart';
+import '../utils/auth_service.dart';
 
-class AppDrawer extends StatelessWidget {
+class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
+
+  @override
+  State<AppDrawer> createState() => _AppDrawerState();
+}
+
+class _AppDrawerState extends State<AppDrawer> {
+  void _handleLogout(BuildContext context) {
+    AuthService.logout();
+    Navigator.pop(context);
+    setState(() {});
+  }
 
   void _go(BuildContext context, Widget screen) {
     Navigator.pop(context);
-    Navigator.pushReplacement(
+    Navigator.push(
       context,
       MaterialPageRoute(builder: (_) => screen),
+    );
+  }
+
+  void _showLoginRequired(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Login Required'),
+        content: const Text('You must login to access this feature.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const LoginScreen()),
+              );
+            },
+            child: const Text('Login'),
+          ),
+        ],
+      ),
     );
   }
 
@@ -39,44 +77,76 @@ class AppDrawer extends StatelessWidget {
             ),
             const Divider(),
 
-            _Item(
-              icon: Icons.home,
-              label: 'Home',
-              onTap: () => _go(context, const HomeScreen()),
-            ),
-            _Item(
-              icon: Icons.graphic_eq,
-              label: 'Screening',
-              onTap: () => _go(context, const ScreeningScreen()),
-            ),
-            _Item(
-              icon: Icons.bar_chart,
-              label: 'Result',
-              onTap: () => _go(context, const ResultScreen()),
-            ),
-            _Item(
-              icon: Icons.history,
-              label: 'Reports',
-              onTap: () => _go(context, const ReportsScreen()),
-            ),
-            _Item(
-              icon: Icons.health_and_safety,
-              label: 'Health & AI',
-              onTap: () => _go(context, const HealthAiScreen()),
-            ),
-            _Item(
-              icon: Icons.info_outline,
-              label: 'About Us',
-              onTap: () => _go(context, const AboutScreen()),
+            Expanded(
+              child: ListView(
+                children: [
+                  _Item(
+                    icon: Icons.home,
+                    label: 'Home',
+                    onTap: () => _go(context, const HomeScreen()),
+                  ),
+                  _Item(
+                    icon: Icons.graphic_eq,
+                    label: 'Screening',
+                    onTap: () {
+                      if (AuthService.isLoggedIn) {
+                        _go(context, const ScreeningScreen());
+                      } else {
+                        _showLoginRequired(context);
+                      }
+                    },
+                  ),
+                  _Item(
+                    icon: Icons.bar_chart,
+                    label: 'Result',
+                    onTap: () => _go(context, const ResultScreen()),
+                  ),
+                  _Item(
+                    icon: Icons.history,
+                    label: 'Reports',
+                    onTap: () {
+                      if (AuthService.isLoggedIn) {
+                        _go(context, const ReportsScreen());
+                      } else {
+                        _showLoginRequired(context);
+                      }
+                    },
+                  ),
+                  _Item(
+                    icon: Icons.health_and_safety,
+                    label: 'Health & AI',
+                    onTap: () => _go(context, const HealthAiScreen()),
+                  ),
+                  _Item(
+                    icon: Icons.info_outline,
+                    label: 'About Us',
+                    onTap: () => _go(context, const AboutScreen()),
+                  ),
+                ],
+              ),
             ),
 
-            const Spacer(),
             const Divider(),
 
-            _Item(
+            AuthService.isLoggedIn
+                ? _Item(
+              icon: Icons.logout,
+              label: 'Logout',
+              onTap: () => _handleLogout(context),
+            )
+                : _Item(
               icon: Icons.login,
               label: 'Login',
-              onTap: () => _go(context, const LoginScreen()),
+              onTap: () async {
+                Navigator.pop(context);
+                await Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (_) => const LoginScreen(),
+                  ),
+                );
+                setState(() {});
+              },
             ),
           ],
         ),

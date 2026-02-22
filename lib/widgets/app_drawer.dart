@@ -26,10 +26,7 @@ class _AppDrawerState extends State<AppDrawer> {
 
   void _go(BuildContext context, Widget screen) {
     Navigator.pop(context);
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (_) => screen),
-    );
+    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
   }
 
   void _showLoginRequired(BuildContext context) {
@@ -96,11 +93,7 @@ class _AppDrawerState extends State<AppDrawer> {
                       }
                     },
                   ),
-                  _Item(
-                    icon: Icons.bar_chart,
-                    label: 'Result',
-                    onTap: () => _go(context, const ResultScreen()),
-                  ),
+
                   _Item(
                     icon: Icons.history,
                     label: 'Reports',
@@ -130,24 +123,22 @@ class _AppDrawerState extends State<AppDrawer> {
 
             AuthService.isLoggedIn
                 ? _Item(
-              icon: Icons.logout,
-              label: 'Logout',
-              onTap: () => _handleLogout(context),
-            )
+                    icon: Icons.logout,
+                    label: 'Logout',
+                    onTap: () => _handleLogout(context),
+                  )
                 : _Item(
-              icon: Icons.login,
-              label: 'Login',
-              onTap: () async {
-                Navigator.pop(context);
-                await Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => const LoginScreen(),
+                    icon: Icons.login,
+                    label: 'Login',
+                    onTap: () async {
+                      Navigator.pop(context);
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const LoginScreen()),
+                      );
+                      setState(() {});
+                    },
                   ),
-                );
-                setState(() {});
-              },
-            ),
           ],
         ),
       ),

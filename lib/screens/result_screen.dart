@@ -5,31 +5,21 @@ import '../widgets/app_drawer.dart';
 import '../models/prediction_result.dart';
 
 class ResultScreen extends StatelessWidget {
-  const ResultScreen({super.key});
+  final Map<String, dynamic> resultData;
+
+  const ResultScreen({super.key, required this.resultData});
 
   // TEMP: dummy data to design UI (replace with API result later)
-  PredictionResult _dummyResult() {
-    return const PredictionResult(
-      disease: 'Asthma',
-      confidence: 66.63,
-      authenticity: 'Authentic Cough',
-      fakeProbability: 1.92,
-      classProbabilities: {
-        'Asthma': 66.63,
-        'Healthy': 23.49,
-        'COPD': 8.70,
-        'Pneumonia': 0.79,
-        'Bronchial': 0.39,
-      },
-      disclaimer:
-      'This is a pre-screening tool, not a medical diagnostic device. '
-          'Consult a healthcare professional for accurate diagnosis.',
-    );
-  }
 
   @override
   Widget build(BuildContext context) {
-    final result = _dummyResult();
+    final disease = resultData['predicted_disease'];
+    final confidence = resultData['confidence'];
+    final authenticity = resultData['authenticity'];
+    final fakeProbability = resultData['fake_probability'];
+    final classProbabilities = Map<String, dynamic>.from(
+      resultData['class_probabilities'],
+    );
 
     return Scaffold(
       drawer: const AppDrawer(),
@@ -57,22 +47,22 @@ class ResultScreen extends StatelessWidget {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        result.disease,
+                        disease ?? 'Unknown',
                         style: AppTextStyles.headingLarge,
                       ),
                       const SizedBox(height: 16),
                       Text(
-                        'Confidence: ${result.confidence.toStringAsFixed(2)}%',
+                        'Confidence: ${(confidence ?? 0).toStringAsFixed(2)}%',
                         style: AppTextStyles.bodyText,
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Authenticity: ${result.authenticity}',
+                        'Authenticity: ${authenticity ?? 'Unknown'}',
                         style: AppTextStyles.bodyText,
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Fake probability: ${result.fakeProbability.toStringAsFixed(2)}%',
+                        'Fake probability: ${(fakeProbability ?? 0).toStringAsFixed(2)}%',
                         style: AppTextStyles.smallText,
                       ),
                     ],
@@ -91,8 +81,8 @@ class ResultScreen extends StatelessWidget {
               ),
               const SizedBox(height: 12),
 
-              ...result.classProbabilities.entries.map(
-                    (entry) => Padding(
+              ...classProbabilities.entries.map(
+                (entry) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 6),
                   child: Row(
                     children: [
@@ -103,7 +93,7 @@ class ResultScreen extends StatelessWidget {
                       Expanded(
                         flex: 2,
                         child: Text(
-                          '${entry.value.toStringAsFixed(2)}%',
+                          '${(entry.value as num).toStringAsFixed(2)}%',
                           textAlign: TextAlign.right,
                           style: AppTextStyles.bodyText,
                         ),
@@ -118,8 +108,9 @@ class ResultScreen extends StatelessWidget {
               // =========================
               // DISCLAIMER
               // =========================
-              Text(
-                result.disclaimer,
+              const Text(
+                'This is a pre-screening tool, not a medical diagnostic device. '
+                'Consult a healthcare professional for accurate diagnosis.',
                 style: AppTextStyles.smallText,
                 textAlign: TextAlign.center,
               ),

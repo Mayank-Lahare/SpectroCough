@@ -3,6 +3,8 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/loading_overlay.dart';
 import 'result_screen.dart';
+import '../services/api_service.dart';
+import 'dart:io';
 
 class RecordingScreen extends StatefulWidget {
   const RecordingScreen({super.key});
@@ -16,19 +18,29 @@ class _RecordingScreenState extends State<RecordingScreen> {
   bool isProcessing = false;
 
   // Called when user taps Stop
-  void _stopAndProcess() {
+  Future<void> _stopAndProcess() async {
     setState(() {
       isRecording = false;
       isProcessing = true;
     });
 
-    // TODO: Replace this delay with real backend call
-    Future.delayed(const Duration(seconds: 2), () {
+    try {
+      // TODO: Replace this with actual recorded file later
+      final File audioFile = File('/storage/emulated/0/Download/1-4211-A-12.wav');
+
+      final result = await ApiService.analyzeAudio(audioFile);
+
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (_) => const ResultScreen()),
+        MaterialPageRoute(builder: (_) => ResultScreen(resultData: result)),
       );
-    });
+    } catch (e) {
+      print("Error calling backend: $e");
+
+      setState(() {
+        isProcessing = false;
+      });
+    }
   }
 
   @override
@@ -99,9 +111,7 @@ class _RecordingScreenState extends State<RecordingScreen> {
                 const SizedBox(height: 16),
 
                 Text(
-                  isRecording
-                      ? 'Tap to stop recording'
-                      : 'Analyzing audio…',
+                  isRecording ? 'Tap to stop recording' : 'Analyzing audio…',
                   style: AppTextStyles.smallText,
                 ),
               ],

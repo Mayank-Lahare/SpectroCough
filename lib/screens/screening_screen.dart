@@ -1,8 +1,17 @@
+// ============================================================
+// Screening Screen
+// ------------------------------------------------------------
+// Responsibilities:
+// - Educate user about supported audio types
+// - Provide entry point to UploadScreen
+// - Maintain clinical clarity and simplicity
+// ============================================================
+
 import 'package:flutter/material.dart';
 import '../widgets/app_drawer.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import 'recording_screen.dart';
+import 'upload_screen.dart';
 
 class ScreeningScreen extends StatelessWidget {
   const ScreeningScreen({super.key});
@@ -10,14 +19,9 @@ class ScreeningScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Drawer navigation
       drawer: const AppDrawer(),
-
-      // App background
       backgroundColor: AppColors.backgroundLight,
-
-      // App bar title
-      appBar: AppBar(title: const Text('Screening')),
+      appBar: AppBar(title: const Text('Respiratory Screening')),
 
       body: SafeArea(
         child: SingleChildScrollView(
@@ -26,30 +30,41 @@ class ScreeningScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.center,
             children: [
-              const SizedBox(height: 24),
 
-              // =========================
-              // INSTRUCTIONS CARD
-              // =========================
+              const SizedBox(height: 16),
+
+              // ============================================================
+              // INTRODUCTION CARD
+              // ============================================================
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(20),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: const [
+
                       Text(
-                        'Before you start',
+                        'Supported Audio Types',
                         style: AppTextStyles.headingMedium,
                       ),
+
                       SizedBox(height: 12),
 
-                      _BulletPoint('Sit in a quiet environment'),
+                      _BulletPoint(
+                          'Normal cough recordings (mobile microphone)'
+                      ),
+
                       SizedBox(height: 8),
 
-                      _BulletPoint('Hold your phone near your mouth/chest'),
+                      _BulletPoint(
+                          'Stethoscopic respiratory sounds'
+                      ),
+
                       SizedBox(height: 8),
 
-                      _BulletPoint('Record for at least 5–10 seconds'),
+                      _BulletPoint(
+                          'WAV format recommended (16kHz preferred)'
+                      ),
                     ],
                   ),
                 ),
@@ -57,56 +72,47 @@ class ScreeningScreen extends StatelessWidget {
 
               const SizedBox(height: 40),
 
-              // =========================
-              // PRIMARY RECORD BUTTON
-              // =========================
-              // Big, clear CTA
-              GestureDetector(
+              // ============================================================
+              // NORMAL AUDIO BUTTON
+              // ============================================================
+              _UploadOptionCard(
+                title: "Upload Normal Audio",
+                subtitle: "Mobile-recorded cough or respiratory sound",
+                icon: Icons.graphic_eq,
                 onTap: () {
                   Navigator.push(
                     context,
                     MaterialPageRoute(
-                      builder: (_) => const RecordingScreen(),
+                      builder: (_) => const UploadScreen(),
                     ),
                   );
                 },
-                child: Container(
-                  height: 96,
-                  width: 96,
-                  decoration: BoxDecoration(
-                    color: AppColors.buttonBlue,
-                    shape: BoxShape.circle,
-                    boxShadow: const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 10,
-                        offset: Offset(0, 6),
-                      ),
-                    ],
-                  ),
-                  child: const Icon(
-                    Icons.mic,
-                    color: AppColors.white,
-                    size: 40,
-                  ),
-                ),
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 20),
 
-              const Text(
-                'Tap to start recording',
-                style: AppTextStyles.bodyText,
+              // ============================================================
+              // STETHOSCOPIC AUDIO BUTTON
+              // ============================================================
+              _UploadOptionCard(
+                title: "Upload Stethoscopic Audio",
+                subtitle: "Digital stethoscope respiratory recording",
+                icon: Icons.health_and_safety,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => const UploadScreen(),
+                    ),
+                  );
+                },
               ),
 
-              const SizedBox(height: 32),
+              const SizedBox(height: 40),
 
-              // =========================
-              // DISCLAIMER
-              // =========================
               const Text(
-                'This tool provides pre-screening only. '
-                    'It does not replace professional medical advice.',
+                'This system provides AI-based pre-screening assistance only. '
+                    'It does not replace professional medical diagnosis.',
                 style: AppTextStyles.smallText,
                 textAlign: TextAlign.center,
               ),
@@ -118,9 +124,68 @@ class ScreeningScreen extends StatelessWidget {
   }
 }
 
-// =========================
-// SMALL BULLET POINT WIDGET
-// =========================
+// ============================================================
+// Upload Option Card Widget
+// ============================================================
+
+class _UploadOptionCard extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _UploadOptionCard({
+    required this.title,
+    required this.subtitle,
+    required this.icon,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.white,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: const [
+            BoxShadow(
+              color: Colors.black12,
+              blurRadius: 8,
+              offset: Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Icon(icon, size: 36, color: AppColors.buttonBlue),
+            const SizedBox(width: 16),
+
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(title, style: AppTextStyles.headingSmall),
+                  const SizedBox(height: 4),
+                  Text(subtitle, style: AppTextStyles.smallText),
+                ],
+              ),
+            ),
+
+            const Icon(Icons.arrow_forward_ios, size: 18),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// Bullet Point Widget
+// ============================================================
+
 class _BulletPoint extends StatelessWidget {
   final String text;
 

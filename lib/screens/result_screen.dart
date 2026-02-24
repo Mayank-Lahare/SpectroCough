@@ -29,6 +29,7 @@ class _ResultScreenState extends State<ResultScreen> {
     final box = Hive.box<PredictionResults>('historyBox');
 
     final disease = widget.resultData['predicted_disease'] ?? 'Unknown';
+
     final confidence = (widget.resultData['confidence'] ?? 0).toDouble();
 
     box.add(
@@ -41,7 +42,7 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   // ============================================================
-  // Helpers
+  // Interpretation Helpers
   // ============================================================
 
   String _interpretConfidence(double confidence) {
@@ -52,10 +53,9 @@ class _ResultScreenState extends State<ResultScreen> {
   }
 
   double _computeTop2Margin(Map<String, dynamic> probabilities) {
-    final values = probabilities.values
-        .map((e) => (e as num).toDouble())
-        .toList()
-      ..sort((a, b) => b.compareTo(a));
+    final values =
+        probabilities.values.map((e) => (e as num).toDouble()).toList()
+          ..sort((a, b) => b.compareTo(a));
 
     if (values.length < 2) return 0;
     return values[0] - values[1];
@@ -78,10 +78,8 @@ class _ResultScreenState extends State<ResultScreen> {
   @override
   Widget build(BuildContext context) {
     final disease = widget.resultData['predicted_disease'] ?? 'Unknown';
+
     final confidence = (widget.resultData['confidence'] ?? 0).toDouble();
-    final authenticity = widget.resultData['authenticity'] ?? 'Unknown';
-    final fakeProbability =
-    (widget.resultData['fake_probability'] ?? 0).toDouble();
 
     final classProbabilities = Map<String, dynamic>.from(
       widget.resultData['class_probabilities'] ?? {},
@@ -90,7 +88,20 @@ class _ResultScreenState extends State<ResultScreen> {
     final sortedEntries = classProbabilities.entries.toList()
       ..sort((a, b) => (b.value as num).compareTo(a.value as num));
 
-    final top2Margin = _computeTop2Margin(classProbabilities);
+    final top2Margin =
+        (widget.resultData['top2_margin'] ??
+                _computeTop2Margin(classProbabilities))
+            .toDouble();
+
+    // ============================================================
+    // Extract backend warnings safely
+    // ============================================================
+
+    final List<String> warnings =
+        (widget.resultData['warnings'] as List?)
+            ?.map((e) => e.toString())
+            .toList() ??
+        [];
 
     return Scaffold(
       drawer: const AppDrawer(),
@@ -101,44 +112,53 @@ class _ResultScreenState extends State<ResultScreen> {
           padding: const EdgeInsets.all(24),
           child: Column(
             children: [
-              // =========================
+              // ============================================================
               // Main Result Card
-              // =========================
+              // ============================================================
               Card(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('Predicted Condition',
-                          style: AppTextStyles.smallText),
+                      const Text(
+                        'Predicted Condition',
+                        style: AppTextStyles.smallText,
+                      ),
+
                       const SizedBox(height: 4),
+
                       Text(disease, style: AppTextStyles.headingLarge),
+
                       const SizedBox(height: 8),
+
                       Text(
                         'Confidence: ${confidence.toStringAsFixed(2)}%',
                         style: AppTextStyles.bodyText,
                       ),
+
                       const SizedBox(height: 4),
+
                       Text(
                         _interpretConfidence(confidence),
                         style: AppTextStyles.smallText,
                       ),
-                      const SizedBox(height: 8),
 
-                      // =========================
+                      const SizedBox(height: 12),
+
+                      // ====================================================
                       // Stability Section
-                      // =========================
+                      // ====================================================
                       Container(
                         padding: const EdgeInsets.all(10),
                         decoration: BoxDecoration(
-                          color: _stabilityColor(top2Margin)
-                              .withValues(alpha: 0.12),
+                          color: _stabilityColor(
+                            top2Margin,
+                          ).withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(8),
                         ),
                         child: Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
                             Text(
                               _stabilityIndex(top2Margin),
@@ -155,38 +175,55 @@ class _ResultScreenState extends State<ResultScreen> {
                         ),
                       ),
 
-                      const SizedBox(height: 8),
-
-                      // =========================
-                      // Authenticity + Fake Probability
-                      // =========================
-                      Row(
-                        mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Authenticity',
-                              style: AppTextStyles.smallText),
-                          Text(
-                            authenticity,
-                            style: AppTextStyles.bodyText.copyWith(
-                              fontWeight: FontWeight.w600,
-                            ),
+                      // ====================================================
+                      // Warning Section (If Any)
+                      // ====================================================
+                      if (warnings.isNotEmpty) ...[
+                        const SizedBox(height: 12),
+                        Container(
+                          padding: const EdgeInsets.all(12),
+                          decoration: BoxDecoration(
+                            color: Colors.orange.withValues(alpha: 0.12),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.orange),
                           ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Row(
-                        mainAxisAlignment:
-                        MainAxisAlignment.spaceBetween,
-                        children: [
-                          const Text('Fake probability',
-                              style: AppTextStyles.smallText),
-                          Text(
-                            '${fakeProbability.toStringAsFixed(2)}%',
-                            style: AppTextStyles.bodyText,
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              const Text(
+                                "Model Advisory",
+                                style: AppTextStyles.headingSmall,
+                              ),
+                              const SizedBox(height: 8),
+                              ...warnings.map(
+                                (warning) => Padding(
+                                  padding: const EdgeInsets.symmetric(
+                                    vertical: 4,
+                                  ),
+                                  child: Row(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      const Icon(
+                                        Icons.warning_amber_rounded,
+                                        size: 18,
+                                        color: Colors.orange,
+                                      ),
+                                      const SizedBox(width: 8),
+                                      Expanded(
+                                        child: Text(
+                                          warning,
+                                          style: AppTextStyles.bodyText,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
-                        ],
-                      ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -194,48 +231,47 @@ class _ResultScreenState extends State<ResultScreen> {
 
               const SizedBox(height: 16),
 
-              // =========================
-              // Probability Bars (Scrollable inside card only)
-              // =========================
+              // ============================================================
+              // Probability Bars Section
+              // ============================================================
               Expanded(
                 child: Card(
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
-                      crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
                           'Class Probability Distribution',
                           style: AppTextStyles.headingMedium,
                         ),
+
                         const SizedBox(height: 12),
+
                         Expanded(
                           child: ListView(
-                            physics:
-                            const BouncingScrollPhysics(),
+                            physics: const BouncingScrollPhysics(),
                             children: sortedEntries.map((entry) {
-                              final value =
-                              (entry.value as num).toDouble();
+                              final value = (entry.value as num).toDouble();
 
                               return Padding(
-                                padding:
-                                const EdgeInsets.symmetric(vertical: 6),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 6,
+                                ),
                                 child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.start,
+                                  crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
                                     Row(
                                       mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
+                                          MainAxisAlignment.spaceBetween,
                                       children: [
-                                        Text(entry.key,
-                                            style:
-                                            AppTextStyles.bodyText),
+                                        Text(
+                                          entry.key,
+                                          style: AppTextStyles.bodyText,
+                                        ),
                                         Text(
                                           '${value.toStringAsFixed(2)}%',
-                                          style:
-                                          AppTextStyles.bodyText,
+                                          style: AppTextStyles.bodyText,
                                         ),
                                       ],
                                     ),
@@ -243,8 +279,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                     LinearProgressIndicator(
                                       value: value / 100,
                                       minHeight: 8,
-                                      backgroundColor:
-                                      Colors.grey.shade300,
+                                      backgroundColor: Colors.grey.shade300,
                                       color: AppColors.buttonBlue,
                                     ),
                                   ],
@@ -261,9 +296,9 @@ class _ResultScreenState extends State<ResultScreen> {
 
               const SizedBox(height: 16),
 
-              // =========================
+              // ============================================================
               // Footer Button
-              // =========================
+              // ============================================================
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(

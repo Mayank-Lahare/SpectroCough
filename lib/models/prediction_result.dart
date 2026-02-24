@@ -1,17 +1,22 @@
-class PredictionResult {
-  final String disease;
-  final double confidence;
-  final String authenticity;
-  final double fakeProbability;
-  final Map<String, double> classProbabilities;
-  final String disclaimer;
+import 'package:hive/hive.dart';
 
-  const PredictionResult({
-    required this.disease,
+part 'prediction_result.g.dart';
+
+@HiveType(typeId: 0)
+class PredictionResults extends HiveObject {
+
+  @HiveField(0)
+  final String condition;
+
+  @HiveField(1)
+  final double confidence;
+
+  @HiveField(2)
+  final DateTime dateTime;
+
+  PredictionResults({
+    required this.condition,
     required this.confidence,
-    required this.authenticity,
-    required this.fakeProbability,
-    required this.classProbabilities,
-    required this.disclaimer,
+    required this.dateTime,
   });
 }

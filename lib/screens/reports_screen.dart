@@ -1,123 +1,201 @@
 import 'package:flutter/material.dart';
+import 'package:hive_flutter/hive_flutter.dart';
+import 'package:intl/intl.dart';
 import '../widgets/app_drawer.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
+import '../models/prediction_result.dart';
 
 class ReportsScreen extends StatelessWidget {
   const ReportsScreen({super.key});
 
-  // TEMP: dummy history data (replace with real storage later)
-  List<Map<String, String>> _dummyHistory() {
-    return const [
-      {'date': '23 Jul', 'condition': 'Asthma', 'confidence': '88%'},
-      {'date': '21 Jul', 'condition': 'Normal', 'confidence': '92%'},
-      {'date': '19 Jul', 'condition': 'Bronchitis', 'confidence': '78%'},
-      {'date': '15 Jul', 'condition': 'COPD', 'confidence': '81%'},
-    ];
-  }
-
   @override
   Widget build(BuildContext context) {
-    final history = _dummyHistory();
+    final box = Hive.box<PredictionResults>('historyBox');
 
     return Scaffold(
       drawer: const AppDrawer(),
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(title: const Text('Reports')),
-
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // =========================
-              // SCREEN TITLE
-              // =========================
-              const Text(
-                'Previous Screenings',
-                style: AppTextStyles.headingMedium,
-              ),
+          child: ValueListenableBuilder(
+            valueListenable: box.listenable(),
+            builder: (context, Box<PredictionResults> box, _) {
+              final reports = box.values.toList().reversed.toList();
 
-              const SizedBox(height: 16),
+              if (reports.isEmpty) {
+                return const Center(
+                  child: Text('No reports yet', style: AppTextStyles.bodyText),
+                );
+              }
 
-              // =========================
-              // HISTORY LIST
-              // =========================
-              Expanded(
-                child: history.isEmpty
-                    ? const Center(
-                  child: Text(
-                    'No reports yet',
-                    style: AppTextStyles.bodyText,
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Previous Screenings',
+                    style: AppTextStyles.headingMedium,
                   ),
-                )
-                    : ListView.separated(
-                  itemCount: history.length,
-                  separatorBuilder: (_, __) =>
-                  const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final item = history[index];
 
-                    return Card(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16),
-                        child: Row(
-                          mainAxisAlignment:
-                          MainAxisAlignment.spaceBetween,
-                          children: [
-                            // Left: Date + Condition
-                            Column(
-                              crossAxisAlignment:
-                              CrossAxisAlignment.start,
+                  const SizedBox(height: 16),
+
+                  Expanded(
+                    child: ListView.separated(
+                      itemCount: reports.length,
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final item = reports[index];
+                        final formattedDate = DateFormat(
+                          'dd MMM yyyy',
+                        ).format(item.dateTime);
+
+                        return Card(
+                          child: Padding(
+                            padding: const EdgeInsets.all(16),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Text(
-                                  item['date'] ?? '',
-                                  style: AppTextStyles.smallText,
+                                Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      formattedDate,
+                                      style: AppTextStyles.smallText,
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      item.condition,
+                                      style: AppTextStyles.bodyText.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.buttonBlue,
+                                      ),
+                                    ),
+                                  ],
                                 ),
-                                const SizedBox(height: 4),
+
                                 Text(
-                                  item['condition'] ?? '',
+                                  '${item.confidence.toStringAsFixed(2)}%',
                                   style: AppTextStyles.bodyText.copyWith(
                                     fontWeight: FontWeight.w600,
-                                    color: AppColors.buttonBlue,
+                                    color: AppColors.textPrimary,
                                   ),
                                 ),
                               ],
                             ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
 
-                            // Right: Confidence
-                            Text(
-                              item['confidence'] ?? '',
-                              style: AppTextStyles.bodyText.copyWith(
-                                fontWeight: FontWeight.w600,
-                                color: AppColors.textPrimary,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  },
-                ),
-              ),
+                  const SizedBox(height: 16),
 
-              const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton(
+                      onPressed: () async {
+                        final confirm = await showDialog<bool>(
+                          context: context,
+                          barrierDismissible: false,
+                          builder: (_) => const ClearHistoryDialog(),
+                        );
 
-              // =========================
-              // CLEAR HISTORY CTA (stub)
-              // =========================
-              SizedBox(
-                width: double.infinity,
-                child: OutlinedButton(
-                  onPressed: () {
-                    // TODO: Implement clear history
-                  },
-                  child: const Text('Clear History'),
-                ),
-              ),
-            ],
+                        if (confirm == true) {
+                          await box.clear();
+
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('History cleared')),
+                            );
+                          }
+                        }
+                      },
+                      child: const Text('Clear History'),
+                    ),
+                  ),
+                ],
+              );
+            },
           ),
+        ),
+      ),
+    );
+  }
+}
+
+class ClearHistoryDialog extends StatelessWidget {
+  const ClearHistoryDialog({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return Dialog(
+      elevation: 1,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: AppColors.backgroundLight,
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              offset: const Offset(0, 10),
+              blurRadius: 30,
+              color: Colors.black.withValues(alpha: 0.08),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            CircleAvatar(
+              backgroundColor: AppColors.buttonBlue.withValues(alpha: 0.12),
+              radius: 26,
+              child: Icon(
+                Icons.warning_amber_rounded,
+                color: AppColors.buttonBlue,
+                size: 28,
+              ),
+            ),
+
+            const SizedBox(height: 12),
+
+            const Text(
+              'Clear History?',
+              style: AppTextStyles.headingSmall,
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 6),
+
+            const Text(
+              'This action will permanently delete all previous reports.',
+              style: AppTextStyles.smallText,
+              textAlign: TextAlign.center,
+            ),
+
+            const SizedBox(height: 20),
+
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+              children: [
+                OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+
+                ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.buttonBlue,
+                  ),
+                  child: const Text('Clear'),
+                ),
+              ],
+            ),
+          ],
         ),
       ),
     );

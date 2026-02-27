@@ -3,7 +3,6 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../screens/home_screen.dart';
 import '../screens/screening_screen.dart';
-import '../screens/result_screen.dart';
 import '../screens/reports_screen.dart';
 import '../screens/health_ai_screen.dart';
 import '../screens/about_screen.dart';

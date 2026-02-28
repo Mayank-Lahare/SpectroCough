@@ -1,3 +1,12 @@
+// ============================================================
+// App Drawer
+// ------------------------------------------------------------
+// Responsibilities:
+// - Navigate between screens
+// - Restrict protected routes
+// - Show Login / Logout based on JWT state
+// ============================================================
+
 import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
@@ -7,7 +16,7 @@ import '../screens/reports_screen.dart';
 import '../screens/health_ai_screen.dart';
 import '../screens/about_screen.dart';
 import '../screens/login_screen.dart';
-import '../utils/auth_service.dart';
+import '../services/api_service.dart';
 
 class AppDrawer extends StatefulWidget {
   const AppDrawer({super.key});
@@ -17,16 +26,41 @@ class AppDrawer extends StatefulWidget {
 }
 
 class _AppDrawerState extends State<AppDrawer> {
-  void _handleLogout(BuildContext context) {
-    AuthService.logout();
-    Navigator.pop(context);
-    setState(() {});
+  bool _loggedIn = false;
+
+  // ============================================================
+  // Check Login Status
+  // ============================================================
+
+  Future<void> _checkLogin() async {
+    final status = await ApiService.isLoggedIn();
+
+    if (!mounted) return;
+
+    setState(() => _loggedIn = status);
   }
+
+  @override
+  void initState() {
+    super.initState();
+    _checkLogin();
+  }
+
+  // ============================================================
+  // Navigation Helper
+  // ============================================================
 
   void _go(BuildContext context, Widget screen) {
     Navigator.pop(context);
-    Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => screen),
+    ).then((_) => _checkLogin());
   }
+
+  // ============================================================
+  // Login Required Dialog
+  // ============================================================
 
   void _showLoginRequired(BuildContext context) {
     showDialog(
@@ -40,18 +74,35 @@ class _AppDrawerState extends State<AppDrawer> {
             child: const Text('Cancel'),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(context);
-              Navigator.push(
+
+              await Navigator.push(
                 context,
                 MaterialPageRoute(builder: (_) => const LoginScreen()),
               );
+
+              _checkLogin();
             },
             child: const Text('Login'),
           ),
         ],
       ),
     );
+  }
+
+  // ============================================================
+  // Logout
+  // ============================================================
+
+  Future<void> _logout(BuildContext context) async {
+    await ApiService.logout();
+
+    if (!mounted) return;
+
+    Navigator.pop(context);
+
+    setState(() => _loggedIn = false);
   }
 
   @override
@@ -71,6 +122,7 @@ class _AppDrawerState extends State<AppDrawer> {
                 ],
               ),
             ),
+
             const Divider(),
 
             Expanded(
@@ -81,11 +133,15 @@ class _AppDrawerState extends State<AppDrawer> {
                     label: 'Home',
                     onTap: () => _go(context, const HomeScreen()),
                   ),
+
+                  // ====================================================
+                  // Screening (Protected)
+                  // ====================================================
                   _Item(
                     icon: Icons.graphic_eq,
                     label: 'Screening',
                     onTap: () {
-                      if (AuthService.isLoggedIn) {
+                      if (_loggedIn) {
                         _go(context, const ScreeningScreen());
                       } else {
                         _showLoginRequired(context);
@@ -93,22 +149,27 @@ class _AppDrawerState extends State<AppDrawer> {
                     },
                   ),
 
+                  // ====================================================
+                  // Reports (Protected)
+                  // ====================================================
                   _Item(
                     icon: Icons.history,
                     label: 'Reports',
                     onTap: () {
-                      if (AuthService.isLoggedIn) {
+                      if (_loggedIn) {
                         _go(context, const ReportsScreen());
                       } else {
                         _showLoginRequired(context);
                       }
                     },
                   ),
+
                   _Item(
                     icon: Icons.health_and_safety,
                     label: 'Health & AI',
                     onTap: () => _go(context, const HealthAiScreen()),
                   ),
+
                   _Item(
                     icon: Icons.info_outline,
                     label: 'About Us',
@@ -120,22 +181,24 @@ class _AppDrawerState extends State<AppDrawer> {
 
             const Divider(),
 
-            AuthService.isLoggedIn
+            _loggedIn
                 ? _Item(
                     icon: Icons.logout,
                     label: 'Logout',
-                    onTap: () => _handleLogout(context),
+                    onTap: () => _logout(context),
                   )
                 : _Item(
                     icon: Icons.login,
                     label: 'Login',
                     onTap: () async {
                       Navigator.pop(context);
+
                       await Navigator.push(
                         context,
                         MaterialPageRoute(builder: (_) => const LoginScreen()),
                       );
-                      setState(() {});
+
+                      _checkLogin();
                     },
                   ),
           ],

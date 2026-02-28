@@ -1,10 +1,5 @@
 // ============================================================
-// Reports Screen
-// ------------------------------------------------------------
-// Responsibilities:
-// - Fetch prediction history from backend
-// - Display prediction results
-// - Clear history from backend
+// Reports Screen (Premium + System Consistent)
 // ============================================================
 
 import 'package:flutter/material.dart';
@@ -14,6 +9,34 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../services/api_service.dart';
 
+// ============================================================
+// Report Model
+// ============================================================
+
+class Report {
+  final DateTime date;
+  final String predictedClass;
+  final double confidence;
+
+  Report({
+    required this.date,
+    required this.predictedClass,
+    required this.confidence,
+  });
+
+  factory Report.fromJson(Map<String, dynamic> json) {
+    return Report(
+      date: DateTime.parse(json["created_at"]),
+      predictedClass: json["predicted_class"],
+      confidence: (json["confidence"] as num).toDouble(),
+    );
+  }
+}
+
+// ============================================================
+// Reports Screen
+// ============================================================
+
 class ReportsScreen extends StatefulWidget {
   const ReportsScreen({super.key});
 
@@ -22,12 +45,8 @@ class ReportsScreen extends StatefulWidget {
 }
 
 class _ReportsScreenState extends State<ReportsScreen> {
-  List<dynamic> _reports = [];
+  List<Report> _reports = [];
   bool _loading = true;
-
-  // ============================================================
-  // Init
-  // ============================================================
 
   @override
   void initState() {
@@ -35,8 +54,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
     _loadReports();
   }
 
-  // ============================================================
-  // Fetch Reports
   // ============================================================
 
   Future<void> _loadReports() async {
@@ -46,24 +63,25 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (!mounted) return;
 
       setState(() {
-        _reports = data;
+        _reports =
+            data.map<Report>((item) => Report.fromJson(item)).toList();
         _loading = false;
       });
-    } catch (_) {
+    } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
     }
   }
 
   // ============================================================
-  // Clear History
-  // ============================================================
 
   Future<void> _clearHistory() async {
-    final confirm = await showDialog<bool>(
+    final confirm = await showModalBottomSheet<bool>(
       context: context,
-      barrierDismissible: false,
-      builder: (_) => const ClearHistoryDialog(),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => const _ClearHistorySheet(),
     );
 
     if (confirm != true) return;
@@ -75,129 +93,232 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (success) {
       setState(() => _reports = []);
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("History cleared")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("History cleared")),
+      );
     }
   }
+
+  // ============================================================
+
+  Color _confidenceColor(double value) {
+    if (value > 80) return Colors.green;
+    if (value > 50) return Colors.orange;
+    return Colors.red;
+  }
+
+  // ============================================================
+
+  String _toProperCase(String value) {
+    if (value.isEmpty) return value;
+    return value[0].toUpperCase() + value.substring(1).toLowerCase();
+  }
+  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       drawer: const AppDrawer(),
       backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(title: const Text('Reports')),
+      appBar: AppBar(
+        title: const Text('Reports'),
+        actions: [
+          if (_reports.isNotEmpty)
+            IconButton(
+              icon: const Icon(Icons.delete_outline),
+              onPressed: _clearHistory,
+            ),
+        ],
+      ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: _loading
-              ? const Center(child: CircularProgressIndicator())
-              : _reports.isEmpty
-              ? const Center(
-                  child: Text('No reports yet', style: AppTextStyles.bodyText),
-                )
-              : Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // ============================================================
-                    // Header Text
-                    // ============================================================
-                    const Text(
-                      'Previous Screenings',
-                      style: AppTextStyles.headingMedium,
-                    ),
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 300),
+            child: _loading
+                ? const Center(child: CircularProgressIndicator())
+                : _reports.isEmpty
+                ? const Center(
+              child: Text(
+                'No reports yet',
+                style: AppTextStyles.bodyText,
+              ),
+            )
+                : Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // ====================================================
+                // Header
+                // ====================================================
 
-                    const SizedBox(height: 16),
+                const Text(
+                  'Previous Screenings',
+                  style: AppTextStyles.headingMedium,
+                ),
 
-                    Expanded(
-                      child: ListView.separated(
-                        itemCount: _reports.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 12),
-                        itemBuilder: (context, index) {
-                          final item = _reports[index];
+                const SizedBox(height: 12),
 
-                          final formattedDate = DateFormat(
-                            'dd MMM yyyy',
-                          ).format(DateTime.parse(item["created_at"]));
+                Text(
+                  '${_reports.length} Screenings',
+                  style: AppTextStyles.smallText,
+                ),
 
-                          return Card(
-                            child: Padding(
-                              padding: const EdgeInsets.all(16),
-                              child: Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                children: [
-                                  Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        formattedDate,
-                                        style: AppTextStyles.smallText,
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Text(
-                                        item["predicted_class"],
-                                        style: AppTextStyles.bodyText.copyWith(
-                                          fontWeight: FontWeight.w600,
-                                          color: AppColors.buttonBlue,
+                const SizedBox(height: 24),
+
+                // ====================================================
+                // List
+                // ====================================================
+
+                Expanded(
+                  child: RefreshIndicator(
+                    onRefresh: _loadReports,
+                    child: ListView.separated(
+                      itemCount: _reports.length,
+                      separatorBuilder: (context, index) =>
+                      const SizedBox(height: 16),
+                      itemBuilder: (context, index) {
+                        final report = _reports[index];
+
+                        return TweenAnimationBuilder(
+                          duration: Duration(
+                              milliseconds: 300 + (index * 50)),
+                          tween: Tween(begin: 0.0, end: 1.0),
+                          builder: (context, double value, child) {
+                            return Opacity(
+                              opacity: value,
+                              child: Transform.translate(
+                                offset:
+                                Offset(0, 20 * (1 - value)),
+                                child: child,
+                              ),
+                            );
+                          },
+                          child: Card(
+                            elevation: 2,
+                            shape: RoundedRectangleBorder(
+                              borderRadius:
+                              BorderRadius.circular(16),
+                            ),
+                            child: InkWell(
+                              borderRadius:
+                              BorderRadius.circular(16),
+                              onTap: () {},
+                              child: Padding(
+                                padding:
+                                const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment:
+                                  CrossAxisAlignment.start,
+                                  children: [
+                                    Row(
+                                      mainAxisAlignment:
+                                      MainAxisAlignment
+                                          .spaceBetween,
+                                      children: [
+                                        Text(
+                                          DateFormat(
+                                              'dd MMM yyyy')
+                                              .format(report.date),
+                                          style: AppTextStyles
+                                              .smallText,
                                         ),
-                                      ),
-                                    ],
-                                  ),
-                                  Text(
-                                    '${item["confidence"]}%',
-                                    style: AppTextStyles.bodyText.copyWith(
-                                      fontWeight: FontWeight.w600,
-                                      color: AppColors.textPrimary,
+                                        Text(
+                                          '${report.confidence.toStringAsFixed(0)}%',
+                                          style: AppTextStyles
+                                              .bodyText
+                                              .copyWith(
+                                            fontWeight:
+                                            FontWeight.w600,
+                                            color:
+                                            _confidenceColor(
+                                                report
+                                                    .confidence),
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ),
-                                ],
+
+                                    const SizedBox(height: 8),
+
+                                    Text(
+                                      _toProperCase(report.predictedClass),
+                                      style: AppTextStyles.bodyText.copyWith(
+                                        fontWeight: FontWeight.w600,
+                                        color: AppColors.buttonBlue,
+                                      ),
+                                    ),
+
+                                    const SizedBox(height: 12),
+
+                                    LinearProgressIndicator(
+                                      value:
+                                      report.confidence / 100,
+                                      backgroundColor:
+                                      Colors.grey.shade200,
+                                      color: _confidenceColor(
+                                          report.confidence),
+                                    ),
+                                  ],
+                                ),
                               ),
                             ),
-                          );
-                        },
-                      ),
+                          ),
+                        );
+                      },
                     ),
-
-                    const SizedBox(height: 16),
-
-                    // ============================================================
-                    // Clear History Button
-                    // ============================================================
-                    SizedBox(
-                      width: double.infinity,
-                      child: OutlinedButton(
-                        onPressed: _clearHistory,
-                        child: const Text('Clear History'),
-                      ),
-                    ),
-                  ],
+                  ),
                 ),
+              ],
+            ),
+          ),
         ),
       ),
     );
   }
 }
 
-class ClearHistoryDialog extends StatelessWidget {
-  const ClearHistoryDialog({super.key});
+// ============================================================
+// Bottom Sheet
+// ============================================================
+
+class _ClearHistorySheet extends StatelessWidget {
+  const _ClearHistorySheet();
 
   @override
   Widget build(BuildContext context) {
-    return AlertDialog(
-      title: const Text("Clear History?"),
-      content: const Text("This will permanently delete all reports."),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.pop(context, false),
-          child: const Text("Cancel"),
-        ),
-        ElevatedButton(
-          onPressed: () => Navigator.pop(context, true),
-          child: const Text("Clear"),
-        ),
-      ],
+    return Padding(
+      padding: const EdgeInsets.all(24),
+      child: Wrap(
+        children: [
+          const Text(
+            "Clear History?",
+            style: AppTextStyles.headingMedium,
+          ),
+          const SizedBox(height: 12),
+          const Text(
+            "This will permanently delete all reports.",
+            style: AppTextStyles.bodyText,
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text("Cancel"),
+                ),
+              ),
+              const SizedBox(width: 16),
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text("Clear"),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 }

@@ -1,46 +1,19 @@
 import 'package:flutter/material.dart';
-import 'package:hive/hive.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_drawer.dart';
 import '../models/prediction_result.dart';
 
 class ResultScreen extends StatefulWidget {
-  final Map<String, dynamic> resultData;
+  final PredictionResult result;
 
-  const ResultScreen({super.key, required this.resultData});
+  const ResultScreen({super.key, required this.result});
 
   @override
   State<ResultScreen> createState() => _ResultScreenState();
 }
 
 class _ResultScreenState extends State<ResultScreen> {
-  @override
-  void initState() {
-    super.initState();
-    _saveToHistory();
-  }
-
-  // ============================================================
-  // Save prediction to local history (Hive)
-  // ============================================================
-
-  void _saveToHistory() {
-    final box = Hive.box<PredictionResults>('historyBox');
-
-    final disease = widget.resultData['predicted_disease'] ?? 'Unknown';
-
-    final confidence = (widget.resultData['confidence'] ?? 0).toDouble();
-
-    box.add(
-      PredictionResults(
-        condition: disease,
-        confidence: confidence,
-        dateTime: DateTime.now(),
-      ),
-    );
-  }
-
   // ============================================================
   // Interpretation Helpers
   // ============================================================
@@ -77,31 +50,18 @@ class _ResultScreenState extends State<ResultScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final disease = widget.resultData['predicted_disease'] ?? 'Unknown';
-
-    final confidence = (widget.resultData['confidence'] ?? 0).toDouble();
-
-    final classProbabilities = Map<String, dynamic>.from(
-      widget.resultData['class_probabilities'] ?? {},
-    );
+    final disease = widget.result.predictedDisease;
+    final confidence = widget.result.confidence;
+    final classProbabilities = widget.result.classProbabilities;
 
     final sortedEntries = classProbabilities.entries.toList()
       ..sort((a, b) => (b.value as num).compareTo(a.value as num));
 
-    final top2Margin =
-        (widget.resultData['top2_margin'] ??
-                _computeTop2Margin(classProbabilities))
-            .toDouble();
+    final top2Margin = widget.result.top2Margin != 0
+        ? widget.result.top2Margin
+        : _computeTop2Margin(classProbabilities);
 
-    // ============================================================
-    // Extract backend warnings safely
-    // ============================================================
-
-    final List<String> warnings =
-        (widget.resultData['warnings'] as List?)
-            ?.map((e) => e.toString())
-            .toList() ??
-        [];
+    final warnings = widget.result.warnings;
 
     return Scaffold(
       drawer: const AppDrawer(),

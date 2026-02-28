@@ -1,22 +1,35 @@
-import 'package:hive/hive.dart';
+// ============================================================
+// Prediction Result Model (Backend DTO)
+// ------------------------------------------------------------
+// Represents prediction response returned from backend
+//  Hive Removed. Pure data model.
+// ============================================================
 
-part 'prediction_result.g.dart';
-
-@HiveType(typeId: 0)
-class PredictionResults extends HiveObject {
-
-  @HiveField(0)
-  final String condition;
-
-  @HiveField(1)
+class PredictionResult {
+  final String predictedDisease;
   final double confidence;
+  final double top2Margin;
+  final Map<String, dynamic> classProbabilities;
+  final List<String> warnings;
 
-  @HiveField(2)
-  final DateTime dateTime;
-
-  PredictionResults({
-    required this.condition,
+  PredictionResult({
+    required this.predictedDisease,
     required this.confidence,
-    required this.dateTime,
+    required this.top2Margin,
+    required this.classProbabilities,
+    required this.warnings,
   });
+
+  factory PredictionResult.fromJson(Map<String, dynamic> json) {
+    return PredictionResult(
+      predictedDisease: json['predicted_disease'] ?? 'Unknown',
+      confidence: (json['confidence'] as num?)?.toDouble() ?? 0,
+      top2Margin: (json['top2_margin'] as num?)?.toDouble() ?? 0,
+      classProbabilities: Map<String, dynamic>.from(
+        json['class_probabilities'] ?? {},
+      ),
+      warnings:
+          (json['warnings'] as List?)?.map((e) => e.toString()).toList() ?? [],
+    );
+  }
 }

@@ -16,6 +16,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/loading_overlay.dart';
 import '../services/api_service.dart';
+import '../models/prediction_result.dart';
 import 'result_screen.dart';
 
 class UploadScreen extends StatefulWidget {
@@ -67,9 +68,17 @@ class _UploadScreenState extends State<UploadScreen> {
 
       if (!mounted) return;
 
+      // ============================================================
+      // Convert backend JSON → PredictionResult model
+      // ============================================================
+
+      final prediction = PredictionResult.fromJson(response);
+
       Navigator.push(
         context,
-        MaterialPageRoute(builder: (_) => ResultScreen(resultData: response)),
+        MaterialPageRoute(
+          builder: (_) => ResultScreen(result: prediction), // ✅ Fixed
+        ),
       );
     } catch (e) {
       debugPrint("Upload error: $e");

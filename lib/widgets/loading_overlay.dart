@@ -2,6 +2,10 @@ import 'package:flutter/material.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 
+// ============================================================
+// Loading Overlay — Clinical Refined Version
+// ============================================================
+
 class LoadingOverlay extends StatelessWidget {
   final bool isLoading;
   final String message;
@@ -11,7 +15,7 @@ class LoadingOverlay extends StatelessWidget {
     super.key,
     required this.isLoading,
     required this.child,
-    this.message = 'Processing…',
+    this.message = 'Processing...',
   });
 
   @override
@@ -23,25 +27,46 @@ class LoadingOverlay extends StatelessWidget {
         if (isLoading)
           Positioned.fill(
             child: Container(
-              color: Colors.black26,
+              // Soft clinical tint instead of dark dim
+              color: AppColors.primary.withOpacity(0.08),
+
               child: Center(
-                child: Card(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(
-                          color: AppColors.buttonBlue,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 28,
+                    vertical: 24,
+                  ),
+                  decoration: BoxDecoration(
+                    color: AppColors.white,
+                    borderRadius: BorderRadius.circular(20),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.05),
+                        blurRadius: 20,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const SizedBox(
+                        width: 28,
+                        height: 28,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2.6,
+                          color: AppColors.primary,
                         ),
-                        const SizedBox(height: 16),
-                        Text(
-                          message,
-                          style: AppTextStyles.bodyText,
-                          textAlign: TextAlign.center,
+                      ),
+                      const SizedBox(height: 18),
+                      Text(
+                        message,
+                        style: AppTextStyles.smallText.copyWith(
+                          fontWeight: FontWeight.w500,
                         ),
-                      ],
-                    ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
                   ),
                 ),
               ),

@@ -2,28 +2,24 @@
 // API Service
 // ------------------------------------------------------------
 // Responsibilities:
-// - Send multipart audio file to backend
-// - Attach audio type (normal / stethoscopic)
-// - Handle authentication (login / register)
-// - Store and attach JWT token
-// - Provide login state & logout
-// - Fetch and clear prediction history
+// - Authentication (login / register / logout)
+// - JWT storage & validation
+// - Fetch current user profile
+// - Send audio for prediction
+// - Fetch & clear prediction history
 // ============================================================
 
 import 'dart:convert';
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:jwt_decoder/jwt_decoder.dart';
 
 class ApiService {
-  static const String baseUrl = "http://10.0.2.2:8000";
+  static const String baseUrl = "http://192.168.1.7:8000";
 
   // ============================================================
   // LOGIN
-  // ------------------------------------------------------------
-  // Parameters:
-  // - email
-  // - password
   // ============================================================
 
   static Future<bool> login(String email, String password) async {
@@ -32,7 +28,10 @@ class ApiService {
     final response = await http.post(
       uri,
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"email": email, "password": password}),
+      body: jsonEncode({
+        "email": email,
+        "password": password,
+      }),
     );
 
     if (response.statusCode == 200) {
@@ -49,44 +48,49 @@ class ApiService {
 
   // ============================================================
   // REGISTER
-  // ------------------------------------------------------------
-  // Parameters:
-  // - name
-  // - email
-  // - password
   // ============================================================
 
   static Future<bool> register(
-    String name,
-    String email,
-    String password,
-  ) async {
+      String name,
+      String email,
+      String password,
+      ) async {
     final uri = Uri.parse("$baseUrl/auth/register");
 
     final response = await http.post(
       uri,
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({"name": name, "email": email, "password": password}),
+      body: jsonEncode({
+        "name": name,
+        "email": email,
+        "password": password,
+      }),
     );
 
     return response.statusCode == 200;
   }
 
   // ============================================================
-  // Check Login Status
-  // ------------------------------------------------------------
-  // Returns true if JWT token exists
+  // CHECK LOGIN STATE (with expiry validation)
   // ============================================================
 
   static Future<bool> isLoggedIn() async {
     final prefs = await SharedPreferences.getInstance();
-    return prefs.getString("access_token") != null;
+    final token = prefs.getString("access_token");
+
+    if (token == null) return false;
+
+    // Check token expiration
+    if (JwtDecoder.isExpired(token)) {
+      await prefs.remove("access_token");
+      return false;
+    }
+
+    return true;
   }
 
   // ============================================================
-  // Logout
-  // ------------------------------------------------------------
-  // Removes stored JWT token
+  // LOGOUT
   // ============================================================
 
   static Future<void> logout() async {
@@ -95,58 +99,17 @@ class ApiService {
   }
 
   // ============================================================
-  // Analyze Audio (Protected)
-  // ------------------------------------------------------------
-  // Parameters:
-  // - audioFile: selected WAV file
-  // - audioType: "normal" or "stethoscopic"
+  // GET CURRENT USER (Protected)
+  // Calls /auth/me
   // ============================================================
 
-  static Future<Map<String, dynamic>> analyzeAudio(
-    File audioFile, {
-    required String audioType,
-  }) async {
-    final uri = Uri.parse("$baseUrl/predict");
+  static Future<Map<String, dynamic>?> getCurrentUser() async {
+    final uri = Uri.parse("$baseUrl/auth/me");
 
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("access_token");
 
-    final request = http.MultipartRequest("POST", uri);
-
-    // Attach JWT token
-    if (token != null) {
-      request.headers["Authorization"] = "Bearer $token";
-    }
-
-    // Attach file
-    request.files.add(
-      await http.MultipartFile.fromPath("file", audioFile.path),
-    );
-
-    // Attach audio type
-    request.fields["audio_type"] = audioType;
-
-    final response = await request.send();
-
-    if (response.statusCode == 200) {
-      final responseBody = await response.stream.bytesToString();
-      return jsonDecode(responseBody);
-    } else {
-      throw Exception("Failed to analyze audio");
-    }
-  }
-
-  // ============================================================
-  // Fetch Predictions (Protected)
-  // ------------------------------------------------------------
-  // Returns list of prediction history (descending)
-  // ============================================================
-
-  static Future<List<dynamic>> fetchPredictions() async {
-    final uri = Uri.parse("$baseUrl/predictions");
-
-    final prefs = await SharedPreferences.getInstance();
-    final token = prefs.getString("access_token");
+    if (token == null) return null;
 
     final response = await http.get(
       uri,
@@ -160,13 +123,91 @@ class ApiService {
       return jsonDecode(response.body);
     }
 
+    // If unauthorized, auto logout
+    if (response.statusCode == 401) {
+      await logout();
+    }
+
+    return null;
+  }
+
+  // ============================================================
+  // ANALYZE AUDIO (Protected)
+  // ============================================================
+
+  static Future<Map<String, dynamic>> analyzeAudio(
+      File audioFile, {
+        required String audioType,
+      }) async {
+    final uri = Uri.parse("$baseUrl/predict");
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("access_token");
+
+    final request = http.MultipartRequest("POST", uri);
+
+    if (token != null) {
+      request.headers["Authorization"] = "Bearer $token";
+    }
+
+    request.files.add(
+      await http.MultipartFile.fromPath("file", audioFile.path),
+    );
+
+    request.fields["audio_type"] = audioType;
+
+    final response = await request.send();
+
+    if (response.statusCode == 200) {
+      final responseBody =
+      await response.stream.bytesToString();
+      return jsonDecode(responseBody);
+    }
+
+    if (response.statusCode == 401) {
+      await logout();
+      throw Exception("Session expired. Please login again.");
+    }
+
+    throw Exception("Failed to analyze audio");
+  }
+
+  // ============================================================
+  // FETCH PREDICTIONS (Protected)
+  // ============================================================
+
+  static Future<List<dynamic>> fetchPredictions() async {
+    final uri = Uri.parse("$baseUrl/predictions");
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString("access_token");
+
+    if (token == null) {
+      throw Exception("Not authenticated");
+    }
+
+    final response = await http.get(
+      uri,
+      headers: {
+        "Authorization": "Bearer $token",
+        "Content-Type": "application/json",
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+
+    if (response.statusCode == 401) {
+      await logout();
+      throw Exception("Session expired. Please login again.");
+    }
+
     throw Exception("Failed to fetch predictions");
   }
 
   // ============================================================
-  // Clear Predictions (Protected)
-  // ------------------------------------------------------------
-  // Deletes all predictions for current user
+  // CLEAR PREDICTIONS (Protected)
   // ============================================================
 
   static Future<bool> clearPredictions() async {
@@ -175,6 +216,8 @@ class ApiService {
     final prefs = await SharedPreferences.getInstance();
     final token = prefs.getString("access_token");
 
+    if (token == null) return false;
+
     final response = await http.delete(
       uri,
       headers: {
@@ -182,6 +225,11 @@ class ApiService {
         "Content-Type": "application/json",
       },
     );
+
+    if (response.statusCode == 401) {
+      await logout();
+      return false;
+    }
 
     return response.statusCode == 200;
   }

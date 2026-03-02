@@ -1,11 +1,5 @@
 // ============================================================
-// Upload Screen
-// ------------------------------------------------------------
-// Responsibilities:
-// - Select WAV audio file
-// - Choose audio type (Normal / Stethoscopic)
-// - Send file + type to backend
-// - Navigate to ResultScreen
+// Upload Screen — Clinical Refined UI (Final Stable Version)
 // ============================================================
 
 import 'dart:io';
@@ -20,21 +14,43 @@ import '../models/prediction_result.dart';
 import 'result_screen.dart';
 
 class UploadScreen extends StatefulWidget {
-  const UploadScreen({super.key});
+  final String initialAudioType;
+
+  const UploadScreen({super.key, required this.initialAudioType});
 
   @override
   State<UploadScreen> createState() => _UploadScreenState();
 }
 
-class _UploadScreenState extends State<UploadScreen> {
+class _UploadScreenState extends State<UploadScreen>
+    with SingleTickerProviderStateMixin {
   File? _selectedFile;
   bool _isProcessing = false;
+  late String _audioType;
 
-  String _audioType = "normal";
+  late AnimationController _pulseController;
+  late Animation<double> _pulseAnimation;
 
-  // ============================================================
-  // Pick WAV File
-  // ============================================================
+  @override
+  void initState() {
+    super.initState();
+    _audioType = widget.initialAudioType;
+
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _pulseAnimation = Tween<double>(begin: 1.0, end: 1.02).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+  }
+
+  @override
+  void dispose() {
+    _pulseController.dispose();
+    super.dispose();
+  }
 
   Future<void> _pickFile() async {
     final result = await FilePicker.platform.pickFiles(
@@ -49,16 +65,10 @@ class _UploadScreenState extends State<UploadScreen> {
     }
   }
 
-  // ============================================================
-  // Analyze Audio
-  // ============================================================
-
   Future<void> _analyze() async {
     if (_selectedFile == null) return;
 
-    setState(() {
-      _isProcessing = true;
-    });
+    setState(() => _isProcessing = true);
 
     try {
       final response = await ApiService.analyzeAudio(
@@ -68,132 +78,91 @@ class _UploadScreenState extends State<UploadScreen> {
 
       if (!mounted) return;
 
-      // ============================================================
-      // Convert backend JSON → PredictionResult model
-      // ============================================================
-
       final prediction = PredictionResult.fromJson(response);
 
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => ResultScreen(result: prediction), // ✅ Fixed
-        ),
+        MaterialPageRoute(builder: (_) => ResultScreen(result: prediction)),
       );
-    } catch (e) {
-      debugPrint("Upload error: $e");
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Analysis failed. Please try again.")),
+        );
+      }
     }
 
-    setState(() {
-      _isProcessing = false;
-    });
+    if (mounted) setState(() => _isProcessing = false);
   }
-
-  // ============================================================
-  // UI
-  // ============================================================
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(title: const Text("Upload Respiratory Audio")),
-
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back_ios_new_rounded, size: 18),
+          color: AppColors.textPrimary,
+          onPressed: () => Navigator.pop(context),
+        ),
+        title: Text("Respiratory Analysis", style: AppTextStyles.headingSmall),
+        centerTitle: true,
+      ),
       body: LoadingOverlay(
         isLoading: _isProcessing,
-        message: "Analyzing audio…",
-
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-
+        message: "Analyzing audio...",
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.fromLTRB(20, 8, 20, 32),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              const _HeaderCard(),
+              const SizedBox(height: 28),
+
+              const _SectionLabel(label: "Audio Type"),
               const SizedBox(height: 12),
 
-              Text("Select Audio Type", style: AppTextStyles.headingMedium),
-
-              const SizedBox(height: 16),
-
-              // ============================================================
-              // Audio Type Segmented Buttons
-              // ============================================================
-              Row(
-                children: [
-                  _TypeButton(
-                    label: "Normal",
-                    selected: _audioType == "normal",
-                    onTap: () => setState(() => _audioType = "normal"),
-                  ),
-                  const SizedBox(width: 12),
-                  _TypeButton(
-                    label: "Stethoscopic",
-                    selected: _audioType == "stethoscopic",
-                    onTap: () => setState(() => _audioType = "stethoscopic"),
-                  ),
-                ],
+              _AudioTypeSelector(
+                selected: _audioType,
+                onChanged: (type) {
+                  setState(() => _audioType = type);
+                },
               ),
 
               const SizedBox(height: 32),
 
-              Text("Upload WAV File", style: AppTextStyles.headingMedium),
+              Center(child: const _SectionLabel(label: "WAV File")),
+              const SizedBox(height: 12),
 
-              const SizedBox(height: 16),
-
-              // ============================================================
-              // File Selection Card
-              // ============================================================
-              GestureDetector(
-                onTap: _pickFile,
-                child: Container(
-                  padding: const EdgeInsets.all(20),
-                  decoration: BoxDecoration(
-                    color: AppColors.white,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(
-                      color: AppColors.buttonBlue.withValues(alpha: 0.3),
-                    ),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(
-                        Icons.upload_file,
-                        color: AppColors.buttonBlue,
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Text(
-                          _selectedFile == null
-                              ? "Tap to select WAV file"
-                              : _selectedFile!.path.split('/').last,
-                          style: AppTextStyles.bodyText,
-                        ),
-                      ),
-                    ],
-                  ),
+              Center(
+                child: _FileUploadCard(
+                  selectedFile: _selectedFile,
+                  pulseAnimation: _pulseAnimation,
+                  onTap: _pickFile,
                 ),
               ),
 
-              const Spacer(),
+              if (_selectedFile != null) ...[
+                const SizedBox(height: 14),
+                _FileInfoRow(file: _selectedFile!),
+              ],
 
-              // ============================================================
-              // Primary Analyze Button
-              // ============================================================
-              SizedBox(
-                width: double.infinity,
-                height: 52,
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.buttonBlue,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _selectedFile != null ? _analyze : null,
-                  child: const Text(
-                    "Analyze Respiratory Audio",
-                    style: TextStyle(fontWeight: FontWeight.w600),
-                  ),
+              const SizedBox(height: 40),
+
+              _AnalyzeButton(
+                enabled: _selectedFile != null,
+                onPressed: _analyze,
+              ),
+
+              const SizedBox(height: 18),
+
+              Center(
+                child: Text(
+                  "Results are for informational purposes only.",
+                  style: AppTextStyles.smallText.copyWith(fontSize: 12),
+                  textAlign: TextAlign.center,
                 ),
               ),
             ],
@@ -205,16 +174,127 @@ class _UploadScreenState extends State<UploadScreen> {
 }
 
 // ============================================================
-// Audio Type Button Widget
+// Header Card
 // ============================================================
 
-class _TypeButton extends StatelessWidget {
+class _HeaderCard extends StatelessWidget {
+  const _HeaderCard();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 24),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          colors: [AppColors.primary, AppColors.primaryDark],
+        ),
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.18),
+            blurRadius: 14,
+            offset: const Offset(0, 6),
+          ),
+        ],
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(14),
+            ),
+            child: const Icon(Icons.graphic_eq, color: Colors.white, size: 26),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "Upload & Analyze",
+                  style: AppTextStyles.headingSmall.copyWith(
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 6),
+                Text(
+                  "Upload a WAV file to detect respiratory conditions.",
+                  style: AppTextStyles.smallText.copyWith(
+                    color: Colors.white.withValues(alpha: 0.85),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// Section Label
+// ============================================================
+
+class _SectionLabel extends StatelessWidget {
   final String label;
+
+  const _SectionLabel({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      label.toUpperCase(),
+      style: AppTextStyles.smallText.copyWith(
+        fontWeight: FontWeight.w600,
+        letterSpacing: 1.1,
+      ),
+    );
+  }
+}
+
+// ============================================================
+// Audio Type Selector
+// ============================================================
+
+class _AudioTypeSelector extends StatelessWidget {
+  final String selected;
+  final ValueChanged<String> onChanged;
+
+  const _AudioTypeSelector({required this.selected, required this.onChanged});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        _TypeOption(
+          label: "Normal",
+          icon: Icons.mic_none_rounded,
+          selected: selected == "normal",
+          onTap: () => onChanged("normal"),
+        ),
+        _TypeOption(
+          label: "Stethoscopic",
+          icon: Icons.monitor_heart_outlined,
+          selected: selected == "stethoscopic",
+          onTap: () => onChanged("stethoscopic"),
+        ),
+      ],
+    );
+  }
+}
+
+class _TypeOption extends StatelessWidget {
+  final String label;
+  final IconData icon;
   final bool selected;
   final VoidCallback onTap;
 
-  const _TypeButton({
+  const _TypeOption({
     required this.label,
+    required this.icon,
     required this.selected,
     required this.onTap,
   });
@@ -224,22 +304,180 @@ class _TypeButton extends StatelessWidget {
     return Expanded(
       child: GestureDetector(
         onTap: onTap,
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 12),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 200),
+          margin: const EdgeInsets.all(4),
+          padding: const EdgeInsets.symmetric(vertical: 14),
           decoration: BoxDecoration(
-            color: selected ? AppColors.buttonBlue : AppColors.white,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppColors.buttonBlue),
+            color: selected
+                ? AppColors.primary.withValues(alpha: 0.08)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(10),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            label,
-            style: TextStyle(
-              color: selected ? Colors.white : AppColors.buttonBlue,
-              fontWeight: FontWeight.w600,
-            ),
+          child: Column(
+            children: [
+              Icon(
+                icon,
+                color: selected ? AppColors.primary : AppColors.textSecondary,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                style: AppTextStyles.smallText.copyWith(
+                  fontWeight: FontWeight.w600,
+                  color: selected ? AppColors.primary : AppColors.textPrimary,
+                ),
+              ),
+            ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+// ============================================================
+// File Upload Card
+// ============================================================
+
+class _FileUploadCard extends StatelessWidget {
+  final File? selectedFile;
+  final Animation<double> pulseAnimation;
+  final VoidCallback onTap;
+
+  const _FileUploadCard({
+    required this.selectedFile,
+    required this.pulseAnimation,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final hasFile = selectedFile != null;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedBuilder(
+        animation: pulseAnimation,
+        builder: (_, child) {
+          return Transform.scale(
+            scale: hasFile ? 1.0 : pulseAnimation.value,
+            child: child,
+          );
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: 24,
+            vertical: 36,
+          ),
+          decoration: BoxDecoration(
+            color: hasFile
+                ? AppColors.primary.withValues(alpha: 0.05)
+                : AppColors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: hasFile
+                  ? AppColors.primary
+                  : AppColors.surface,
+              width: 1.5,
+            ),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Icon(
+                hasFile
+                    ? Icons.check_circle_rounded
+                    : Icons.cloud_upload_outlined,
+                size: 44,
+                color: hasFile
+                    ? AppColors.primary
+                    : AppColors.textSecondary,
+              ),
+              const SizedBox(height: 16),
+              Text(
+                hasFile
+                    ? "File selected"
+                    : "Tap to browse files",
+                textAlign: TextAlign.center,
+                softWrap: true,
+                maxLines: 2,
+                overflow: TextOverflow.visible,
+                style: AppTextStyles.bodyText.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+// ============================================================
+// File Info Row
+// ============================================================
+
+class _FileInfoRow extends StatelessWidget {
+  final File file;
+
+  const _FileInfoRow({required this.file});
+
+  @override
+  Widget build(BuildContext context) {
+    final fileName = file.path.split('/').last;
+
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: AppColors.white,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.audio_file_rounded, color: AppColors.primary),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              fileName,
+              style: AppTextStyles.smallText,
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+          const Icon(Icons.check, color: AppColors.success),
+        ],
+      ),
+    );
+  }
+}
+
+// ============================================================
+// Analyze Button
+// ============================================================
+
+class _AnalyzeButton extends StatelessWidget {
+  final bool enabled;
+  final VoidCallback onPressed;
+
+  const _AnalyzeButton({required this.enabled, required this.onPressed});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 56,
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: enabled ? onPressed : null,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.primary,
+          disabledBackgroundColor: AppColors.primary.withValues(alpha: 0.4),
+          elevation: enabled ? 2 : 0,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
+        ),
+        child: Text("Analyze Audio", style: AppTextStyles.buttonText),
       ),
     );
   }

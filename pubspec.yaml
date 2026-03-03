@@ -129,11 +129,9 @@ flutter_icons:
   image_path: "assets/icon/spectro_icon_2.png"
 
 flutter_native_splash:
-  color: "#0F3E4E"
-  android: true
-  ios: true
+  color: "#0E3E4F"
+  image: assets/logo/spectro_logo_1.png
 
   android_12:
-    color: "#0F3E4E"
-    image: assets/icon/spectro_icon_s_1.png
-    icon_background_color: "#0F3E4E"
+    image: assets/logo/splash_logo_foreground.png
+    icon_background_color: "#0E3E4F"

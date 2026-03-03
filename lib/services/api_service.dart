@@ -16,7 +16,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
 
 class ApiService {
-  static const String baseUrl = "http://192.168.1.7:8000";
+  static const String baseUrl = "http://10.0.2.2:8000";
 
   // ============================================================
   // LOGIN

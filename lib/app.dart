@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'theme/app_colors.dart';
 import 'screens/splash_screen.dart';
+import 'widgets/responsive_container.dart';
 
 class SpectroCoughApp extends StatelessWidget {
   const SpectroCoughApp({super.key});
@@ -10,6 +11,9 @@ class SpectroCoughApp extends StatelessWidget {
     return MaterialApp(
       title: 'SpectroCough',
       debugShowCheckedModeBanner: false,
+      builder: (context, child) {
+        return ResponsiveContainer(child: child ?? const SizedBox());
+      },
 
       theme: ThemeData(
         useMaterial3: true,

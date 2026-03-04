@@ -10,13 +10,13 @@
 // ============================================================
 
 import 'dart:convert';
-import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:flutter/foundation.dart';
 
 class ApiService {
-  static const String baseUrl = "http://10.0.2.2:8000";
+  static const String baseUrl = "http://localhost:8000";
 
   // ============================================================
   // LOGIN
@@ -28,10 +28,7 @@ class ApiService {
     final response = await http.post(
       uri,
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "email": email,
-        "password": password,
-      }),
+      body: jsonEncode({"email": email, "password": password}),
     );
 
     if (response.statusCode == 200) {
@@ -51,20 +48,16 @@ class ApiService {
   // ============================================================
 
   static Future<bool> register(
-      String name,
-      String email,
-      String password,
-      ) async {
+    String name,
+    String email,
+    String password,
+  ) async {
     final uri = Uri.parse("$baseUrl/auth/register");
 
     final response = await http.post(
       uri,
       headers: {"Content-Type": "application/json"},
-      body: jsonEncode({
-        "name": name,
-        "email": email,
-        "password": password,
-      }),
+      body: jsonEncode({"name": name, "email": email, "password": password}),
     );
 
     return response.statusCode == 200;
@@ -136,9 +129,10 @@ class ApiService {
   // ============================================================
 
   static Future<Map<String, dynamic>> analyzeAudio(
-      File audioFile, {
-        required String audioType,
-      }) async {
+    List<int> fileBytes,
+    String fileName, {
+    required String audioType,
+  }) async {
     final uri = Uri.parse("$baseUrl/predict");
 
     final prefs = await SharedPreferences.getInstance();
@@ -151,16 +145,17 @@ class ApiService {
     }
 
     request.files.add(
-      await http.MultipartFile.fromPath("file", audioFile.path),
+      http.MultipartFile.fromBytes("file", fileBytes, filename: fileName),
     );
 
     request.fields["audio_type"] = audioType;
 
     final response = await request.send();
 
+    // CHANGE: read response body for both success and error cases
+    final responseBody = await response.stream.bytesToString();
+
     if (response.statusCode == 200) {
-      final responseBody =
-      await response.stream.bytesToString();
       return jsonDecode(responseBody);
     }
 
@@ -169,7 +164,10 @@ class ApiService {
       throw Exception("Session expired. Please login again.");
     }
 
-    throw Exception("Failed to analyze audio");
+    // CHANGE: expose backend error message for debugging
+    debugPrint("[API ERROR] (${response.statusCode}) $responseBody");
+
+    throw Exception("API Error ${response.statusCode}: $responseBody");
   }
 
   // ============================================================

@@ -1,9 +1,10 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 import '../models/news_article.dart';
 
 class NewsService {
-  static const String _apiKey = '8239b4ebf5a694d2c9c6be1b87662910';
+  static String get _apiKey => dotenv.env['GNEWS_API_KEY'] ?? '';
 
   static Future<List<NewsArticle>> fetchHealthAiNews() async {
     final uri = Uri.parse(
@@ -15,13 +16,16 @@ class NewsService {
           '&token=$_apiKey',
     );
 
-    final response = await http.get(uri);
+    final response =
+    await http.get(uri).timeout(const Duration(seconds: 10));
 
     if (response.statusCode == 200) {
-      final data = json.decode(response.body);
-      final List articlesJson = data['articles'] ?? [];
+      final data = jsonDecode(response.body) as Map<String, dynamic>;
+      final List articlesJson = (data['articles'] ?? []) as List;
 
-      return articlesJson.map((json) => NewsArticle.fromJson(json)).toList();
+      return articlesJson
+          .map((json) => NewsArticle.fromJson(json))
+          .toList();
     } else {
       throw Exception('Failed to load Health & AI news');
     }

@@ -63,8 +63,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
       if (!mounted) return;
 
       setState(() {
-        _reports =
-            data.map<Report>((item) => Report.fromJson(item)).toList();
+        _reports = data.map<Report>((item) => Report.fromJson(item)).toList();
         _loading = false;
       });
     } catch (e) {
@@ -93,26 +92,31 @@ class _ReportsScreenState extends State<ReportsScreen> {
     if (success) {
       setState(() => _reports = []);
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("History cleared")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("History cleared")));
     }
   }
 
   // ============================================================
+  // Confidence Color (System Status Aligned)
+  // ============================================================
 
   Color _confidenceColor(double value) {
-    if (value > 80) return Colors.green;
-    if (value > 50) return Colors.orange;
-    return Colors.red;
+    if (value > 80) return AppColors.success;
+    if (value > 50) return AppColors.warning;
+    return AppColors.danger;
   }
 
+  // ============================================================
+  // Proper Case Helper (UI Formatting Only)
   // ============================================================
 
   String _toProperCase(String value) {
     if (value.isEmpty) return value;
     return value[0].toUpperCase() + value.substring(1).toLowerCase();
   }
+
   // ============================================================
 
   @override
@@ -122,6 +126,10 @@ class _ReportsScreenState extends State<ReportsScreen> {
       backgroundColor: AppColors.backgroundLight,
       appBar: AppBar(
         title: const Text('Reports'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.primary,
+        centerTitle: true,
         actions: [
           if (_reports.isNotEmpty)
             IconButton(
@@ -139,137 +147,134 @@ class _ReportsScreenState extends State<ReportsScreen> {
                 ? const Center(child: CircularProgressIndicator())
                 : _reports.isEmpty
                 ? const Center(
-              child: Text(
-                'No reports yet',
-                style: AppTextStyles.bodyText,
-              ),
-            )
+                    child: Text(
+                      'No reports yet',
+                      style: AppTextStyles.bodyText,
+                    ),
+                  )
                 : Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // ====================================================
-                // Header
-                // ====================================================
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // ====================================================
+                      // Header
+                      // ====================================================
+                      const Text(
+                        'Previous Screenings',
+                        style: AppTextStyles.headingMedium,
+                      ),
 
-                const Text(
-                  'Previous Screenings',
-                  style: AppTextStyles.headingMedium,
-                ),
+                      const SizedBox(height: 12),
 
-                const SizedBox(height: 12),
+                      Text(
+                        '${_reports.length} Screenings',
+                        style: AppTextStyles.smallText,
+                      ),
 
-                Text(
-                  '${_reports.length} Screenings',
-                  style: AppTextStyles.smallText,
-                ),
+                      const SizedBox(height: 24),
 
-                const SizedBox(height: 24),
+                      // ====================================================
+                      // List
+                      // ====================================================
+                      Expanded(
+                        child: RefreshIndicator(
+                          onRefresh: _loadReports,
+                          child: ListView.separated(
+                            itemCount: _reports.length,
+                            separatorBuilder: (context, index) =>
+                                const SizedBox(height: 16),
+                            itemBuilder: (context, index) {
+                              final report = _reports[index];
 
-                // ====================================================
-                // List
-                // ====================================================
-
-                Expanded(
-                  child: RefreshIndicator(
-                    onRefresh: _loadReports,
-                    child: ListView.separated(
-                      itemCount: _reports.length,
-                      separatorBuilder: (context, index) =>
-                      const SizedBox(height: 16),
-                      itemBuilder: (context, index) {
-                        final report = _reports[index];
-
-                        return TweenAnimationBuilder(
-                          duration: Duration(
-                              milliseconds: 300 + (index * 50)),
-                          tween: Tween(begin: 0.0, end: 1.0),
-                          builder: (context, double value, child) {
-                            return Opacity(
-                              opacity: value,
-                              child: Transform.translate(
-                                offset:
-                                Offset(0, 20 * (1 - value)),
-                                child: child,
-                              ),
-                            );
-                          },
-                          child: Card(
-                            elevation: 2,
-                            shape: RoundedRectangleBorder(
-                              borderRadius:
-                              BorderRadius.circular(16),
-                            ),
-                            child: InkWell(
-                              borderRadius:
-                              BorderRadius.circular(16),
-                              onTap: () {},
-                              child: Padding(
-                                padding:
-                                const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment:
-                                  CrossAxisAlignment.start,
-                                  children: [
-                                    Row(
-                                      mainAxisAlignment:
-                                      MainAxisAlignment
-                                          .spaceBetween,
-                                      children: [
-                                        Text(
-                                          DateFormat(
-                                              'dd MMM yyyy')
-                                              .format(report.date),
-                                          style: AppTextStyles
-                                              .smallText,
-                                        ),
-                                        Text(
-                                          '${report.confidence.toStringAsFixed(0)}%',
-                                          style: AppTextStyles
-                                              .bodyText
-                                              .copyWith(
-                                            fontWeight:
-                                            FontWeight.w600,
-                                            color:
-                                            _confidenceColor(
-                                                report
-                                                    .confidence),
-                                          ),
-                                        ),
-                                      ],
+                              return TweenAnimationBuilder(
+                                duration: Duration(
+                                  milliseconds: 300 + (index * 50),
+                                ),
+                                tween: Tween(begin: 0.0, end: 1.0),
+                                builder: (context, double value, child) {
+                                  return Opacity(
+                                    opacity: value,
+                                    child: Transform.translate(
+                                      offset: Offset(0, 20 * (1 - value)),
+                                      child: child,
                                     ),
+                                  );
+                                },
+                                child: Card(
+                                  elevation: 2,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(16),
+                                  ),
+                                  child: InkWell(
+                                    borderRadius: BorderRadius.circular(16),
+                                    onTap: () {},
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            mainAxisAlignment:
+                                                MainAxisAlignment.spaceBetween,
+                                            children: [
+                                              Text(
+                                                DateFormat(
+                                                  'dd MMM yyyy',
+                                                ).format(report.date),
+                                                style: AppTextStyles.smallText,
+                                              ),
+                                              Text(
+                                                '${report.confidence.toStringAsFixed(0)}%',
+                                                style: AppTextStyles.bodyText
+                                                    .copyWith(
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                      color: _confidenceColor(
+                                                        report.confidence,
+                                                      ),
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
 
-                                    const SizedBox(height: 8),
+                                          const SizedBox(height: 8),
 
-                                    Text(
-                                      _toProperCase(report.predictedClass),
-                                      style: AppTextStyles.bodyText.copyWith(
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.buttonBlue,
+                                          Text(
+                                            _toProperCase(
+                                              report.predictedClass,
+                                            ),
+                                            style: AppTextStyles.bodyText
+                                                .copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: AppColors.primary,
+                                                ),
+                                          ),
+
+                                          const SizedBox(height: 12),
+
+                                          LinearProgressIndicator(
+                                            value: report.confidence / 100,
+                                            backgroundColor: AppColors.surface,
+                                            minHeight: 6,
+                                            borderRadius: BorderRadius.circular(
+                                              8,
+                                            ),
+                                            color: _confidenceColor(
+                                              report.confidence,
+                                            ),
+                                          ),
+                                        ],
                                       ),
                                     ),
-
-                                    const SizedBox(height: 12),
-
-                                    LinearProgressIndicator(
-                                      value:
-                                      report.confidence / 100,
-                                      backgroundColor:
-                                      Colors.grey.shade200,
-                                      color: _confidenceColor(
-                                          report.confidence),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                              ),
-                            ),
+                              );
+                            },
                           ),
-                        );
-                      },
-                    ),
+                        ),
+                      ),
+                    ],
                   ),
-                ),
-              ],
-            ),
           ),
         ),
       ),
@@ -290,10 +295,7 @@ class _ClearHistorySheet extends StatelessWidget {
       padding: const EdgeInsets.all(24),
       child: Wrap(
         children: [
-          const Text(
-            "Clear History?",
-            style: AppTextStyles.headingMedium,
-          ),
+          const Text("Clear History?", style: AppTextStyles.headingMedium),
           const SizedBox(height: 12),
           const Text(
             "This will permanently delete all reports.",

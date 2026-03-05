@@ -66,7 +66,14 @@ class _ResultScreenState extends State<ResultScreen> {
     return Scaffold(
       drawer: const AppDrawer(),
       backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(title: const Text('Result')),
+      appBar: AppBar(
+        title: const Text('Result'),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.primary,
+        centerTitle: true,
+      ),
+
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
@@ -240,7 +247,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                       value: value / 100,
                                       minHeight: 8,
                                       backgroundColor: Colors.grey.shade300,
-                                      color: AppColors.buttonBlue,
+                                      color: AppColors.primary,
                                     ),
                                   ],
                                 ),

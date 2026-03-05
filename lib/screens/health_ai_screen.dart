@@ -1,79 +1,155 @@
 import 'package:flutter/material.dart';
-import '../widgets/app_drawer.dart';
-import '../theme/app_colors.dart';
-import '../theme/app_text_styles.dart';
+import 'package:spectrocough/theme/app_colors.dart';
+import '../services/news_service.dart';
+import '../models/news_article.dart';
+import 'article_webview_screen.dart';
 
-class HealthAiScreen extends StatelessWidget {
+class HealthAiScreen extends StatefulWidget {
   const HealthAiScreen({super.key});
 
   @override
+  State<HealthAiScreen> createState() => _HealthAiScreenState();
+}
+
+class _HealthAiScreenState extends State<HealthAiScreen> {
+  late final Future<List<NewsArticle>> _future;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = NewsService.fetchHealthAiNews(); // Cached once
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Scaffold(
-      drawer: const AppDrawer(),
-      backgroundColor: AppColors.backgroundLight,
-      appBar: AppBar(title: const Text('Health & AI')),
+      appBar: AppBar(
+        title: const Text("Health & AI"),
+        centerTitle: true,
+        backgroundColor: Colors.transparent,
+        foregroundColor: AppColors.primary,
+        elevation: 0,
+      ),
+      body: FutureBuilder<List<NewsArticle>>(
+        future: _future,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(24),
+          if (snapshot.hasError) {
+            return Center(
+              child: Text(
+                "Unable to load updates.",
+                style: theme.textTheme.bodyMedium,
+              ),
+            );
+          }
 
+          final articles = snapshot.data ?? [];
+
+          if (articles.isEmpty) {
+            return Center(
+              child: Text(
+                "No updates available.",
+                style: theme.textTheme.bodyMedium,
+              ),
+            );
+          }
+
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: articles.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
+            itemBuilder: (context, index) {
+              return _ArticleCard(article: articles[index]);
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _ArticleCard extends StatelessWidget {
+  final NewsArticle article;
+
+  const _ArticleCard({required this.article});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      clipBehavior: Clip.antiAlias,
+      child: InkWell(
+        onTap: () {
+          if (article.url.isEmpty) return;
+
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) =>
+                  ArticleWebViewScreen(url: article.url, title: article.title),
+            ),
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              // =========================
-              // INTRO
-              // =========================
-              Text('About SpectroCough', style: AppTextStyles.headingMedium),
-              SizedBox(height: 12),
+            children: [
+              if (article.imageUrl.isNotEmpty) ...[
+                ClipRRect(
+                  borderRadius: BorderRadius.circular(12),
+                  child: Image.network(
+                    article.imageUrl,
+                    height: 180,
+                    width: double.infinity,
+                    fit: BoxFit.cover,
+                    frameBuilder:
+                        (
+                          BuildContext context,
+                          Widget child,
+                          int? frame,
+                          bool wasSynchronouslyLoaded,
+                        ) {
+                          if (wasSynchronouslyLoaded) {
+                            return child;
+                          }
+
+                          return AnimatedOpacity(
+                            opacity: frame == null ? 0 : 1,
+                            duration: const Duration(milliseconds: 300),
+                            child: child,
+                          );
+                        },
+                    errorBuilder:
+                        (
+                          BuildContext context,
+                          Object error,
+                          StackTrace? stackTrace,
+                        ) {
+                          return const SizedBox();
+                        },
+                  ),
+                ),
+                const SizedBox(height: 12),
+              ],
               Text(
-                'SpectroCough is an AI-powered pre-screening tool designed to '
-                    'analyze respiratory sounds such as cough and breathing patterns. '
-                    'It helps users get an early indication of possible respiratory conditions.',
-                style: AppTextStyles.bodyText,
+                article.title,
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w600,
+                ),
               ),
-
-              SizedBox(height: 24),
-
-              // =========================
-              // HOW AI WORKS
-              // =========================
-              Text('How the AI works', style: AppTextStyles.headingMedium),
-              SizedBox(height: 12),
+              const SizedBox(height: 8),
               Text(
-                'The system extracts acoustic features from recorded respiratory sounds '
-                    'and feeds them into a trained machine learning model. '
-                    'The model compares patterns against known respiratory conditions '
-                    'to estimate the most likely class and confidence level.',
-                style: AppTextStyles.bodyText,
-              ),
-
-              SizedBox(height: 24),
-
-              // =========================
-              // HOW TO USE
-              // =========================
-              Text('How to use the app', style: AppTextStyles.headingMedium),
-              SizedBox(height: 12),
-              Text(
-                '1. Go to the Screening section.\n'
-                    '2. Record your respiratory sound in a quiet environment.\n'
-                    '3. Wait while the AI analyzes the sound.\n'
-                    '4. View the pre-screening result and confidence.\n',
-                style: AppTextStyles.bodyText,
-              ),
-
-              SizedBox(height: 24),
-
-              // =========================
-              // SAFETY DISCLAIMER
-              // =========================
-              Text('Important Disclaimer', style: AppTextStyles.headingMedium),
-              SizedBox(height: 12),
-              Text(
-                'This application is intended for educational and pre-screening purposes only. '
-                    'It is not a medical diagnostic tool. '
-                    'Always consult a qualified healthcare professional for medical advice and diagnosis.',
-                style: AppTextStyles.smallText,
+                article.description,
+                maxLines: 3,
+                overflow: TextOverflow.ellipsis,
+                style: theme.textTheme.bodyMedium,
               ),
             ],
           ),

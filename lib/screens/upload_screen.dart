@@ -2,7 +2,6 @@
 // Upload Screen — Clinical Refined UI (Final Stable Version)
 // ============================================================
 
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:file_picker/file_picker.dart';
 
@@ -24,7 +23,7 @@ class UploadScreen extends StatefulWidget {
 
 class _UploadScreenState extends State<UploadScreen>
     with SingleTickerProviderStateMixin {
-  File? _selectedFile;
+  PlatformFile? _selectedFile;
   bool _isProcessing = false;
   late String _audioType;
 
@@ -56,11 +55,12 @@ class _UploadScreenState extends State<UploadScreen>
     final result = await FilePicker.platform.pickFiles(
       type: FileType.custom,
       allowedExtensions: ['wav'],
+      withData: true,
     );
 
-    if (result != null && result.files.single.path != null) {
+    if (result != null) {
       setState(() {
-        _selectedFile = File(result.files.single.path!);
+        _selectedFile = result.files.single;
       });
     }
   }
@@ -72,7 +72,8 @@ class _UploadScreenState extends State<UploadScreen>
 
     try {
       final response = await ApiService.analyzeAudio(
-        _selectedFile!,
+        _selectedFile!.bytes!,
+        _selectedFile!.name,
         audioType: _audioType,
       );
 
@@ -341,7 +342,7 @@ class _TypeOption extends StatelessWidget {
 // ============================================================
 
 class _FileUploadCard extends StatelessWidget {
-  final File? selectedFile;
+  final PlatformFile? selectedFile;
   final Animation<double> pulseAnimation;
   final VoidCallback onTap;
 
@@ -366,44 +367,31 @@ class _FileUploadCard extends StatelessWidget {
           );
         },
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 24,
-            vertical: 36,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 36),
           decoration: BoxDecoration(
             color: hasFile
                 ? AppColors.primary.withValues(alpha: 0.05)
                 : AppColors.white,
             borderRadius: BorderRadius.circular(18),
             border: Border.all(
-              color: hasFile
-                  ? AppColors.primary
-                  : AppColors.surface,
+              color: hasFile ? AppColors.primary : AppColors.surface,
               width: 1.5,
             ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.center,
             children: [
               Icon(
                 hasFile
                     ? Icons.check_circle_rounded
                     : Icons.cloud_upload_outlined,
                 size: 44,
-                color: hasFile
-                    ? AppColors.primary
-                    : AppColors.textSecondary,
+                color: hasFile ? AppColors.primary : AppColors.textSecondary,
               ),
               const SizedBox(height: 16),
               Text(
-                hasFile
-                    ? "File selected"
-                    : "Tap to browse files",
+                hasFile ? "File selected" : "Tap to browse files",
                 textAlign: TextAlign.center,
-                softWrap: true,
-                maxLines: 2,
-                overflow: TextOverflow.visible,
                 style: AppTextStyles.bodyText.copyWith(
                   fontWeight: FontWeight.w600,
                 ),
@@ -415,18 +403,19 @@ class _FileUploadCard extends StatelessWidget {
     );
   }
 }
+
 // ============================================================
 // File Info Row
 // ============================================================
 
 class _FileInfoRow extends StatelessWidget {
-  final File file;
+  final PlatformFile file;
 
   const _FileInfoRow({required this.file});
 
   @override
   Widget build(BuildContext context) {
-    final fileName = file.path.split('/').last;
+    final fileName = file.name;
 
     return Container(
       padding: const EdgeInsets.all(12),

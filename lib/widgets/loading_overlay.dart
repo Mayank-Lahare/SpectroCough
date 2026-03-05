@@ -28,7 +28,7 @@ class LoadingOverlay extends StatelessWidget {
           Positioned.fill(
             child: Container(
               // Soft clinical tint instead of dark dim
-              color: AppColors.primary.withOpacity(0.08),
+              color: AppColors.primary.withValues(alpha: 0.08),
 
               child: Center(
                 child: Container(
@@ -41,7 +41,7 @@ class LoadingOverlay extends StatelessWidget {
                     borderRadius: BorderRadius.circular(20),
                     boxShadow: [
                       BoxShadow(
-                        color: Colors.black.withOpacity(0.05),
+                        color: Colors.black.withValues(alpha: 0.05),
                         blurRadius: 20,
                         offset: const Offset(0, 8),
                       ),

@@ -30,7 +30,6 @@
 
         </activity>
 
-        <!-- Required for Flutter plugin registration -->
         <meta-data
             android:name="flutterEmbedding"
             android:value="2" />

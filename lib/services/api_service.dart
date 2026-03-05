@@ -16,7 +16,7 @@ import 'package:jwt_decoder/jwt_decoder.dart';
 import 'package:flutter/foundation.dart';
 
 class ApiService {
-  static const String baseUrl = "http:// 192.168.137.1:8000";
+  static const String baseUrl = "http://192.168.137.1:8000";
 
   // ============================================================
   // LOGIN

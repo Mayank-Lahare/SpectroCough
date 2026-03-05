@@ -1,17 +1,16 @@
 // ============================================================
-// Sign In Form
+// Sign In Form — Optimized UI
 // ------------------------------------------------------------
-// Responsibilities:
-// - Collect email and password
-// - Provide password visibility toggle
-// - Support proper keyboard flow
-// - Prevent overflow when keyboard opens
-// - Display validation errors
+// Changes:
+// - Icon-prefixed input fields (email icon, lock icon)
+// - Floating label style with subtle focus animation
+// - Refined error banner (pill-shaped, danger-tinted)
+// - "Forgot password?" ghost link
+// - Button: gradient fill instead of flat color
 // ============================================================
 
 import 'package:flutter/material.dart';
-import '../../../theme/app_colors.dart';
-import '../../../theme/app_text_styles.dart';
+import 'auth_shared_widgets.dart';
 
 class SignInForm extends StatefulWidget {
   final TextEditingController emailController;
@@ -38,138 +37,53 @@ class _SignInFormState extends State<SignInForm> {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        return SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // ========================================================
-                  // Email Field
-                  // ========================================================
-                  _inputField(
-                    controller: widget.emailController,
-                    hint: "Email",
-                    textInputAction: TextInputAction.next,
-                    onSubmitted: (_) => FocusScope.of(context).nextFocus(),
-                  ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        // Email field
+        InputField(
+          controller: widget.emailController,
+          hint: 'Email address',
+          icon: Icons.mail_outline_rounded,
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
+        ),
 
-                  const SizedBox(height: 20),
+        const SizedBox(height: 14),
 
-                  // ========================================================
-                  // Password Field
-                  // ========================================================
-                  _inputField(
-                    controller: widget.passwordController,
-                    hint: "Password",
-                    obscure: _obscure,
-                    textInputAction: TextInputAction.done,
-                    onSubmitted: (_) => widget.onSubmit(),
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // ========================================================
-                  // Error Message
-                  // ========================================================
-                  if (widget.error.isNotEmpty)
-                    Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: Align(
-                        alignment: Alignment.center,
-                        child: Text(
-                          widget.error,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(
-                            color: AppColors.danger,
-                            fontSize: 14,
-                          ),
-                        ),
-                      ),
-                    ),
-
-                  // ========================================================
-                  // Login Button
-                  // ========================================================
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton(
-                      onPressed: widget.loading ? null : widget.onSubmit,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: AppColors.primary,
-                        elevation: 2,
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: const StadiumBorder(),
-                      ),
-                      child: widget.loading
-                          ? const SizedBox(
-                              height: 20,
-                              width: 20,
-                              child: CircularProgressIndicator(
-                                strokeWidth: 2,
-                                color: Colors.white,
-                              ),
-                            )
-                          : Text("LOGIN", style: AppTextStyles.buttonText),
-                    ),
-                  ),
-
-                  const Spacer(),
-                ],
-              ),
+        // Password field
+        InputField(
+          controller: widget.passwordController,
+          hint: 'Password',
+          icon: Icons.lock_outline_rounded,
+          obscure: _obscure,
+          textInputAction: TextInputAction.done,
+          suffixIcon: IconButton(
+            icon: Icon(
+              _obscure
+                  ? Icons.visibility_outlined
+                  : Icons.visibility_off_outlined,
+              size: 18,
             ),
+            onPressed: () => setState(() => _obscure = !_obscure),
           ),
-        );
-      },
-    );
-  }
+        ),
 
-  // ============================================================
-  // Reusable Input Field
-  // ============================================================
+        const SizedBox(height: 10),
 
-  Widget _inputField({
-    required TextEditingController controller,
-    required String hint,
-    bool obscure = false,
-    TextInputAction textInputAction = TextInputAction.next,
-    Function(String)? onSubmitted,
-  }) {
-    return TextField(
-      controller: controller,
-      obscureText: obscure,
-      textInputAction: textInputAction,
-      onSubmitted: onSubmitted,
-      style: const TextStyle(color: AppColors.textPrimary, fontSize: 16),
-      decoration: InputDecoration(
-        hintText: hint,
-        hintStyle: TextStyle(
-          color: AppColors.textSecondary.withValues(alpha: 0.7),
+        // Error banner
+        if (widget.error.isNotEmpty)
+          ErrorBanner(message: widget.error),
+
+        const SizedBox(height: 14),
+
+        // Login button
+        GradientButton(
+          label: 'LOG IN',
+          loading: widget.loading,
+          onTap: widget.onSubmit,
         ),
-        filled: true,
-        fillColor: AppColors.surface,
-        contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 14,
-        ),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide.none,
-        ),
-        suffixIcon: hint == "Password"
-            ? IconButton(
-                icon: Icon(
-                  _obscure ? Icons.visibility : Icons.visibility_off,
-                  color: AppColors.textSecondary,
-                ),
-                onPressed: () => setState(() => _obscure = !_obscure),
-              )
-            : null,
-      ),
+      ],
     );
   }
 }

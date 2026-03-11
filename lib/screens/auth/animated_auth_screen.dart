@@ -15,9 +15,9 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import '../../theme/app_colors.dart';
 import '../../services/api_service.dart';
-import 'widgets/sign_in_form.dart';
-import 'widgets/sign_up_form.dart';
-import 'widgets/bubble_indicator.dart';
+import 'sign_in_form.dart';
+import 'sign_up_form.dart';
+import 'bubble_indicator.dart';
 
 class AnimatedAuthScreen extends StatefulWidget {
   const AnimatedAuthScreen({super.key});

@@ -4,11 +4,13 @@
 
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import '../widgets/app_drawer.dart';
+
+import '../services/api_service.dart';
 import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
-import '../services/api_service.dart';
-
+import '../widgets/app_drawer.dart';
+import '../models/detailed_report_model.dart';
+import '../screens/detailed_report_screen.dart';
 // ============================================================
 // Report Model
 // ============================================================
@@ -17,11 +19,17 @@ class Report {
   final DateTime date;
   final String predictedClass;
   final double confidence;
+  final Map<String, double> probabilities;
+  final double top2Margin;
+  final List<String> warnings;
 
   Report({
     required this.date,
     required this.predictedClass,
     required this.confidence,
+    required this.probabilities,
+    required this.top2Margin,
+    required this.warnings,
   });
 
   factory Report.fromJson(Map<String, dynamic> json) {
@@ -29,10 +37,14 @@ class Report {
       date: DateTime.parse(json["created_at"]),
       predictedClass: json["predicted_class"],
       confidence: (json["confidence"] as num).toDouble(),
+      probabilities: Map<String, double>.from(
+        json["class_probabilities"] ?? {},
+      ),
+      top2Margin: (json["top2_margin"] as num?)?.toDouble() ?? 0,
+      warnings: List<String>.from(json["warnings"] ?? []),
     );
   }
 }
-
 // ============================================================
 // Reports Screen
 // ============================================================
@@ -206,7 +218,19 @@ class _ReportsScreenState extends State<ReportsScreen> {
                                   ),
                                   child: InkWell(
                                     borderRadius: BorderRadius.circular(16),
-                                    onTap: () {},
+                                    onTap: () {  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) => DetailedReportScreen(
+                                          report: DetailedReport(
+                                            date: report.date,
+                                            predictedClass: report.predictedClass,
+                                            confidence: report.confidence,
+                                            probabilities: report.probabilities,
+                                          ),
+                                        ),
+                                      ),
+                                    );},
                                     child: Padding(
                                       padding: const EdgeInsets.all(16),
                                       child: Column(

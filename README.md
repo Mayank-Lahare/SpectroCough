@@ -1,42 +1,53 @@
 # SpectroCough
 
+AI-powered respiratory screening system using cough sound analysis.
+
 ![Frontend](https://img.shields.io/badge/Frontend-Flutter-blue)
 ![Backend](https://img.shields.io/badge/Backend-FastAPI-green)
 ![ML](https://img.shields.io/badge/ML-TensorFlow%20%7C%20Keras-orange)
 ![Database](https://img.shields.io/badge/Database-PostgreSQL-blue)
+![Status](https://img.shields.io/badge/Status-Active-success)
 ![License](https://img.shields.io/badge/License-Academic-lightgrey)
 
 SpectroCough is an AI-powered respiratory screening system that analyzes cough audio recordings and predicts possible respiratory conditions using a machine learning model.
 
 The system consists of a Flutter mobile application connected to a FastAPI backend that runs an audio processing and machine learning inference pipeline.
 
-The platform allows users to upload cough recordings, receive predictions with confidence scores, track prediction history, and access health related educational content.
+The platform allows users to upload cough recordings, receive predictions with confidence scores, view detailed AI screening reports, track prediction history, and access health related educational content. The system is designed for screening and educational purposes only and does not provide medical diagnosis.
 
 ---
 
 # Features
 
 ### AI Prediction
-- Upload cough audio samples
-- Automated preprocessing and feature extraction
-- Machine learning inference
-- Confidence scoring
-- Prediction stability margin
+
+* Upload cough audio samples
+* Automated preprocessing and feature extraction
+* Machine learning inference
+* Confidence scoring
+* Prediction stability margin
+* Class probability distribution
+* Prediction warnings for unstable predictions
 
 ### User System
-- User registration and login
-- JWT based authentication
-- Secure API communication
+
+* User registration and login
+* JWT based authentication
+* Secure API communication
 
 ### Health Tools
-- AI assisted respiratory screening
-- Prediction history and reports
-- Educational health articles
+
+* AI assisted respiratory screening
+* Prediction history and reports
+* Detailed screening report with probability breakdown
+* Downloadable PDF screening report
+* Educational health articles
 
 ### System Monitoring
-- Health check endpoints
-- Model information endpoint
-- Rate limited prediction API
+
+* Health check endpoints
+* Model information endpoint
+* Rate limited prediction API
 
 ---
 
@@ -67,23 +78,28 @@ Response Returned to App
 # Tech Stack
 
 ## Frontend
-- Flutter
-- Dart
-- Material UI components
-- REST API integration
-- WebView for article viewing
+
+* Flutter
+* Dart
+* Material UI components
+* REST API integration
+* WebView for article viewing
+* PDF generation using Flutter `pdf` and `printing` packages
 
 ## Backend
-- FastAPI
-- SQLAlchemy
-- PostgreSQL
-- JWT Authentication
-- SlowAPI rate limiting
+
+* FastAPI
+* SQLAlchemy
+* PostgreSQL
+* JWT Authentication
+* SlowAPI rate limiting
 
 ## Machine Learning
-- TensorFlow / Keras model (.keras)
-- Feature scaler (.pkl)
-- Custom audio preprocessing pipeline
+
+* TensorFlow / Keras model (.keras)
+* Hybrid cough feature extraction (mel spectrogram + acoustic features)
+* Feature scaler (.pkl)
+* Custom audio preprocessing pipeline
 
 ---
 
@@ -166,6 +182,8 @@ Ensure the backend server is running before testing prediction features.
 </p>
 
 <p align="center">
+  <img src="doc/screenshots/detailed_report.jpg" width="260" alt="Detailed_Report_Screen">
+  <img src="doc/screenshots/generated_report.jpg" width="260" alt="Generated_Report">
   <img src="doc/screenshots/health_ai_feed.jpg" width="260" alt="Health_and_AI_Screen">
 </p>
 
@@ -176,24 +194,27 @@ Ensure the backend server is running before testing prediction features.
 The Flutter application follows a modular structure separating UI, services, models, and shared components.
 
 ### Screens
-- Splash Screen
-- Login / Authentication Screens
-- Home Screen
-- Upload Screen
-- Result Screen
-- Reports Screen
-- Health AI Screen
-- Article Viewer Screen
-- About Screen
+
+* Splash Screen
+* Login / Authentication Screens
+* Home Screen
+* Upload Screen
+* Result Screen
+* Reports Screen
+* Detailed Report Screen
+* Health AI Screen
+* Article Viewer Screen
+* About Screen
 
 ### UI Components
 
 Reusable widgets include
 
-- Navigation drawer
-- Loading overlays
-- Authentication components
-- Animated UI indicators
+* Navigation drawer
+* Loading overlays
+* Authentication components
+* Animated UI indicators
+* Report UI components (probability rows, result card, disclaimer card)
 
 ### Services Layer
 
@@ -203,22 +224,29 @@ Frontend services manage communication with backend APIs.
 
 Handles
 
-- Authentication
-- Prediction requests
-- Fetching prediction history
+* Authentication
+* Prediction requests
+* Fetching prediction history
 
 **news_service.dart**
 
 Handles
 
-- Retrieving health related articles
+* Retrieving health related articles
+
+**pdf_service.dart**
+
+Handles
+
+* Generating downloadable PDF screening reports
 
 ### Models
 
 Frontend models represent API responses.
 
-- `prediction_result.dart`
-- `news_article.dart`
+* `prediction_result.dart`
+* `news_article.dart`
+* `detailed_report_model.dart`
 
 These models convert JSON API responses into strongly typed Dart objects.
 
@@ -257,7 +285,12 @@ lib/
 │
 ├── widgets/
 │   ├── app_drawer.dart
-│   └── loading_overlay.dart
+│   ├── loading_overlay.dart
+│   └── report/
+│       ├── hero_result_card.dart
+│       ├── probability_row.dart
+│       ├── section_card.dart
+│       └── disclaimer_card.dart
 │
 ├── theme/
 │   ├── app_colors.dart
@@ -265,11 +298,16 @@ lib/
 │
 ├── services/
 │   ├── api_service.dart
-│   └── news_service.dart
+│   ├── news_service.dart
+│   └── pdf_service.dart
+│
+├── utils/
+│   └── symptom_map.dart
 │
 ├── screens/
 │   ├── about_screen.dart
 │   ├── article_webview_screen.dart
+│   ├── detailed_report_screen.dart
 │   ├── health_ai_screen.dart
 │   ├── home_screen.dart
 │   ├── login_screen.dart
@@ -280,15 +318,15 @@ lib/
 │   ├── upload_screen.dart
 │   └── auth/
 │       ├── animated_auth_screen.dart
-│       └── widgets/
-│           ├── auth_shared_widgets.dart
-│           ├── bubble_indicator.dart
-│           ├── sign_in_form.dart
-│           └── sign_up_form.dart
+│       ├── auth_shared_widgets.dart
+│       ├── bubble_indicator.dart
+│       ├── sign_in_form.dart
+│       └── sign_up_form.dart
 │
 └── models/
     ├── news_article.dart
-    └── prediction_result.dart
+    ├── prediction_result.dart
+    └── detailed_report_model.dart
 ```
 
 ---
@@ -311,16 +349,17 @@ POST /predict
 
 Request
 
-- Multipart audio file (.wav)
-- audio_type
+* Multipart audio file (.wav)
+* audio_type
 
 Response
 
-- Predicted condition
-- Confidence score
-- Prediction stability margin
-- Model version
-- Optional warnings
+* Predicted condition
+* Confidence score
+* Prediction stability margin
+* Class probability distribution
+* Prediction warnings
+* Model version
 
 ---
 
@@ -344,12 +383,12 @@ GET /model-info
 
 # Future Improvements
 
-- Model version tracking
-- Monitoring dashboards
-- Deployment automation
-- Docker containerization
-- Expanded datasets
-- Clinical validation
+* Model version tracking
+* Monitoring dashboards
+* Deployment automation
+* Docker containerization
+* Expanded datasets
+* Clinical validation
 
 ---
 

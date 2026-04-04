@@ -3,6 +3,7 @@ import '../theme/app_colors.dart';
 import '../theme/app_text_styles.dart';
 import '../widgets/app_drawer.dart';
 import '../models/prediction_result.dart';
+import '../utils/symptom_map.dart';
 
 class ResultScreen extends StatefulWidget {
   final PredictionResult result;
@@ -95,7 +96,10 @@ class _ResultScreenState extends State<ResultScreen> {
 
                       const SizedBox(height: 4),
 
-                      Text(disease, style: AppTextStyles.headingLarge),
+                      Text(
+                        formatCondition(disease),
+                        style: AppTextStyles.headingLarge,
+                      ),
 
                       const SizedBox(height: 8),
 
@@ -233,7 +237,7 @@ class _ResultScreenState extends State<ResultScreen> {
                                           MainAxisAlignment.spaceBetween,
                                       children: [
                                         Text(
-                                          entry.key,
+                                          formatCondition(entry.key),
                                           style: AppTextStyles.bodyText,
                                         ),
                                         Text(

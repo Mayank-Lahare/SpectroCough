@@ -5,7 +5,7 @@ const Map<String, List<String>> symptomMap = {
     "Excess mucus or phlegm",
     "Wheezing",
     "Chest tightness",
-    "Fatigue"
+    "Fatigue",
   ],
 
   "asthma": [
@@ -13,7 +13,7 @@ const Map<String, List<String>> symptomMap = {
     "Shortness of breath",
     "Chest tightness",
     "Cough",
-    "Night cough"
+    "Night cough",
   ],
 
   "pneumonia": [
@@ -22,10 +22,20 @@ const Map<String, List<String>> symptomMap = {
     "Chills",
     "Shortness of breath",
     "Chest pain or discomfort",
-    "Fatigue"
+    "Fatigue",
   ],
 
-  "healthy": [
-    "No abnormal respiratory patterns detected"
-  ],
+  "healthy": ["No abnormal respiratory patterns detected"],
 };
+
+const Map<String, String> conditionLabelMap = {
+  "copd": "COPD",
+  "asthma": "Asthma",
+  "pneumonia": "Pneumonia",
+  "healthy": "Healthy",
+  "bronchial": "Bronchial",
+};
+
+String formatCondition(String raw) {
+  return conditionLabelMap[raw] ?? raw;
+}

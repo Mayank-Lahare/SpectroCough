@@ -346,7 +346,7 @@ class PdfService {
                 pw.SizedBox(height: 8),
 
                 pw.Text(
-                  _toProperCase(report.predictedClass),
+                  formatCondition(report.predictedClass),
                   style: pw.TextStyle(
                     fontSize: 26,
                     fontWeight: pw.FontWeight.bold,
@@ -452,7 +452,7 @@ class PdfService {
                 children: [
                   pw.Expanded(
                     child: pw.Text(
-                      entry.key,
+                      formatCondition(entry.key),
                       style: pw.TextStyle(fontSize: 11),
                     ),
                   ),
@@ -564,10 +564,6 @@ class PdfService {
   // Helper utilities
   // ==========================================================
 
-  static String _toProperCase(String value) {
-    if (value.isEmpty) return value;
-    return value[0].toUpperCase() + value.substring(1).toLowerCase();
-  }
 
   static String _monthName(int month) {
     const months = [

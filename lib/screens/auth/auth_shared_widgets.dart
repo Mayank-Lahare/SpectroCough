@@ -21,6 +21,7 @@ class InputField extends StatefulWidget {
   final TextInputAction textInputAction;
   final Function(String)? onSubmitted;
   final FocusNode? focusNode;
+  final Function(String)? onChanged;
 
   const InputField({
     super.key,
@@ -33,6 +34,7 @@ class InputField extends StatefulWidget {
     this.textInputAction = TextInputAction.next,
     this.onSubmitted,
     this.focusNode,
+    this.onChanged,
   });
 
   @override
@@ -55,6 +57,18 @@ class _InputFieldState extends State<InputField> {
     // Use provided focus node or create our own
     _focusNode = widget.focusNode ?? FocusNode();
     _focusNode.addListener(_focusListener);
+  }
+
+  @override
+  void didUpdateWidget(covariant InputField oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.focusNode != widget.focusNode) {
+      oldWidget.focusNode?.removeListener(_focusListener);
+
+      _focusNode = widget.focusNode ?? FocusNode();
+      _focusNode.addListener(_focusListener);
+    }
   }
 
   @override
@@ -90,21 +104,23 @@ class _InputFieldState extends State<InputField> {
         // Restored glow effect
         boxShadow: isFocused
             ? [
-          BoxShadow(
-            color: AppColors.accent.withValues(alpha: 0.15),
-            blurRadius: 12,
-            offset: const Offset(0, 3),
-          ),
-        ]
+                BoxShadow(
+                  color: AppColors.accent.withValues(alpha: 0.15),
+                  blurRadius: 12,
+                  offset: const Offset(0, 3),
+                ),
+              ]
             : [],
       ),
       child: TextField(
+        onChanged: widget.onChanged,
         controller: widget.controller,
         focusNode: _focusNode,
         obscureText: widget.obscure,
         textInputAction: widget.textInputAction,
         keyboardType: widget.keyboardType,
         onSubmitted: widget.onSubmitted,
+        onTapOutside: (_) => FocusScope.of(context).unfocus(),
         decoration: InputDecoration(
           hintText: widget.hint,
           prefixIcon: Icon(
@@ -184,16 +200,16 @@ class GradientButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: loading
               ? LinearGradient(
-            colors: [
-              AppColors.primary.withValues(alpha: 0.5),
-              AppColors.primary.withValues(alpha: 0.5),
-            ],
-          )
+                  colors: [
+                    AppColors.primary.withValues(alpha: 0.5),
+                    AppColors.primary.withValues(alpha: 0.5),
+                  ],
+                )
               : const LinearGradient(
-            colors: [AppColors.primaryDark, AppColors.accent],
-            begin: Alignment.centerLeft,
-            end: Alignment.centerRight,
-          ),
+                  colors: [AppColors.primaryDark, AppColors.accent],
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                ),
           borderRadius: BorderRadius.circular(14),
         ),
         child: ElevatedButton(
@@ -204,22 +220,22 @@ class GradientButton extends StatelessWidget {
           ),
           child: loading
               ? const SizedBox(
-            height: 18,
-            width: 18,
-            child: CircularProgressIndicator(
-              strokeWidth: 2,
-              color: Colors.white,
-            ),
-          )
+                  height: 18,
+                  width: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: Colors.white,
+                  ),
+                )
               : Text(
-            label,
-            style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-              letterSpacing: 1.1,
-            ),
-          ),
+                  label,
+                  style: const TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.w700,
+                    color: Colors.white,
+                    letterSpacing: 1.1,
+                  ),
+                ),
         ),
       ),
     );

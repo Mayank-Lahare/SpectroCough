@@ -17,6 +17,7 @@ class SignInForm extends StatefulWidget {
   final TextEditingController passwordController;
   final bool loading;
   final String error;
+  final bool isSuccess;
   final VoidCallback onSubmit;
 
   const SignInForm({
@@ -25,6 +26,7 @@ class SignInForm extends StatefulWidget {
     required this.passwordController,
     required this.loading,
     required this.error,
+    required this.isSuccess,
     required this.onSubmit,
   });
 
@@ -73,7 +75,7 @@ class _SignInFormState extends State<SignInForm> {
 
         // Error banner
         if (widget.error.isNotEmpty)
-          ErrorBanner(message: widget.error),
+          ErrorBanner(message: widget.error, isSuccess: widget.isSuccess),
 
         const SizedBox(height: 14),
 

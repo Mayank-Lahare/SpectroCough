@@ -4,6 +4,7 @@
 
 import 'package:flutter/material.dart';
 import 'auth_shared_widgets.dart';
+import 'package:spectrocough/theme/app_colors.dart';
 
 class SignUpForm extends StatefulWidget {
   final TextEditingController nameController;
@@ -11,6 +12,7 @@ class SignUpForm extends StatefulWidget {
   final TextEditingController passwordController;
   final bool loading;
   final String error;
+  final bool isSuccess;
   final VoidCallback onSubmit;
 
   const SignUpForm({
@@ -20,6 +22,7 @@ class SignUpForm extends StatefulWidget {
     required this.passwordController,
     required this.loading,
     required this.error,
+    required this.isSuccess,
     required this.onSubmit,
   });
 
@@ -29,6 +32,7 @@ class SignUpForm extends StatefulWidget {
 
 class _SignUpFormState extends State<SignUpForm> {
   bool _obscure = true;
+  String _passwordError = '';
 
   @override
   Widget build(BuildContext context) {
@@ -55,6 +59,19 @@ class _SignUpFormState extends State<SignUpForm> {
 
         // Password
         InputField(
+          onChanged: (value) {
+            setState(() {
+              if (value.isEmpty) {
+                _passwordError = '';
+              } else if (!_validatePassword(value)) {
+                _passwordError =
+                    'Min 8 characters, include uppercase, number, and symbol';
+              } else {
+                _passwordError = '';
+              }
+            });
+          },
+
           controller: widget.passwordController,
           hint: 'Password',
           icon: Icons.lock_outline,
@@ -69,11 +86,20 @@ class _SignUpFormState extends State<SignUpForm> {
           ),
         ),
 
+        if (_passwordError.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 6),
+            child: Text(
+              _passwordError,
+              style: TextStyle(fontSize: 11, color: AppColors.danger),
+            ),
+          ),
+
         const SizedBox(height: 16),
 
         // Error banner
         if (widget.error.isNotEmpty)
-          ErrorBanner(message: widget.error),
+          ErrorBanner(message: widget.error, isSuccess: widget.isSuccess),
 
         const SizedBox(height: 12),
 
@@ -85,5 +111,14 @@ class _SignUpFormState extends State<SignUpForm> {
         ),
       ],
     );
+  }
+
+  bool _validatePassword(String p) {
+    final hasUpper = p.contains(RegExp(r'[A-Z]'));
+    final hasLower = p.contains(RegExp(r'[a-z]'));
+    final hasSpecial = p.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    final hasLength = p.length >= 8;
+
+    return hasUpper && hasLower && hasSpecial && hasLength;
   }
 }

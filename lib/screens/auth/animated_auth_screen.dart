@@ -39,7 +39,9 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
   // ── State ─────────────────────────────────────────────────
   int _currentIndex = 0;
   bool _loading = false;
-  String _error = '';
+
+  String _message = '';
+  bool _isSuccess = false;
 
   // ── Orb animation ─────────────────────────────────────────
   late final AnimationController _orbController;
@@ -83,18 +85,25 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
     final password = _loginPasswordController.text.trim();
 
     if (!_validateEmail(email)) {
-      setState(() => _error = 'Please enter a valid email address');
+      setState(() {
+        _message = 'Please enter a valid email address';
+        _isSuccess = false;
+      });
       return;
     }
 
     if (!_validatePassword(password)) {
-      setState(() => _error = 'Password must be at least 8 characters');
+      setState(() {
+        _message = 'Use 8+ characters with uppercase, number, and symbol';
+        _isSuccess = false;
+      });
       return;
     }
 
     setState(() {
       _loading = true;
-      _error = '';
+      _message = '';
+      _isSuccess = false;
     });
 
     final success = await ApiService.login(email, password);
@@ -106,7 +115,10 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
     if (success) {
       Navigator.pop(context, true);
     } else {
-      setState(() => _error = 'Authentication failed. Please try again.');
+      setState(() {
+        _message = 'Authentication failed. Please try again.';
+        _isSuccess = false;
+      });
     }
   }
 
@@ -117,23 +129,33 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
     final password = _registerPasswordController.text.trim();
 
     if (name.isEmpty) {
-      setState(() => _error = 'Please enter your full name');
+      setState(() {
+        _message = 'Please enter your full name';
+        _isSuccess = false;
+      });
       return;
     }
 
     if (!_validateEmail(email)) {
-      setState(() => _error = 'Please enter a valid email address');
+      setState(() {
+        _message = 'Please enter a valid email address';
+        _isSuccess = false;
+      });
       return;
     }
 
     if (!_validatePassword(password)) {
-      setState(() => _error = 'Password must be at least 8 characters');
+      setState(() {
+        _message = 'Use 8+ characters with uppercase, number, and symbol';
+        _isSuccess = false;
+      });
       return;
     }
 
     setState(() {
       _loading = true;
-      _error = '';
+      _message = '';
+      _isSuccess = false;
     });
 
     final success = await ApiService.register(name, email, password);
@@ -149,9 +171,15 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
         curve: Curves.easeInOut,
       );
 
-      setState(() => _error = 'Registration successful. Please log in.');
+      setState(() {
+        _message = 'Registration successful. Please log in.';
+        _isSuccess = true;
+      });
     } else {
-      setState(() => _error = 'Registration failed. Please try again.');
+      setState(() {
+        _message = 'Registration failed. Please try again.';
+        _isSuccess = false;
+      });
     }
   }
 
@@ -216,7 +244,10 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
                                           passwordController:
                                               _loginPasswordController,
                                           loading: _loading,
-                                          error: _error,
+                                          error: _currentIndex == 0
+                                              ? _message
+                                              : '',
+                                          isSuccess: _isSuccess,
                                           onSubmit: _handleLogin,
                                         ),
                                         SignUpForm(
@@ -227,7 +258,10 @@ class _AnimatedAuthScreenState extends State<AnimatedAuthScreen>
                                           passwordController:
                                               _registerPasswordController,
                                           loading: _loading,
-                                          error: _error,
+                                          error: _currentIndex == 1
+                                              ? _message
+                                              : '',
+                                          isSuccess: _isSuccess,
                                           onSubmit: _handleRegister,
                                         ),
                                       ],

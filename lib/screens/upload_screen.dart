@@ -85,14 +85,20 @@ class _UploadScreenState extends State<UploadScreen>
         context,
         MaterialPageRoute(builder: (_) => ResultScreen(result: prediction)),
       );
-    } catch (_) {
+    } catch (e) {
+
+      debugPrint("ANALYSIS ERROR: $e");
+
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Analysis failed. Please try again.")),
+          SnackBar(
+            content: Text(
+              "Analysis failed:\n$e",
+            ),
+          ),
         );
       }
     }
-
     if (mounted) setState(() => _isProcessing = false);
   }
 

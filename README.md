@@ -9,7 +9,7 @@ AI-powered respiratory screening system using cough sound analysis.
 ![Status](https://img.shields.io/badge/Status-Active-success)
 ![License](https://img.shields.io/badge/License-Academic-lightgrey)
 
-SpectroCough is an AI-powered respiratory screening system that analyzes cough audio recordings and predicts possible respiratory conditions using a machine learning model.
+SpectroCough is an AI-powered respiratory screening system that analyzes respiratory audio recordings and predicts possible respiratory conditions using dedicated machine learning models for both stethoscopic lung sounds and microphone-recorded cough audio.
 
 The system consists of a Flutter mobile application connected to a FastAPI backend that runs an audio processing and machine learning inference pipeline.
 
@@ -22,6 +22,7 @@ The platform allows users to upload cough recordings, receive predictions with c
 ### AI Prediction
 
 * Upload cough audio samples
+* Supports stethoscopic and microphone-based respiratory screening
 * Automated preprocessing and feature extraction
 * Machine learning inference
 * Confidence scoring
@@ -46,7 +47,7 @@ The platform allows users to upload cough recordings, receive predictions with c
 ### System Monitoring
 
 * Health check endpoints
-* Model information endpoint
+* Model information and health monitoring endpoints
 * Rate limited prediction API
 
 ---
@@ -62,9 +63,9 @@ Audio Preprocessing Pipeline
         ↓
 Feature Extraction
         ↓
-Feature Scaling
+Model Selection (Audio Type)
         ↓
-Keras Machine Learning Model
+Dedicated Machine Learning Inference
         ↓
 Prediction + Confidence
         ↓
@@ -96,9 +97,11 @@ Response Returned to App
 
 ## Machine Learning
 
-* TensorFlow / Keras model (.keras)
-* Hybrid cough feature extraction (mel spectrogram + acoustic features)
-* Feature scaler (.pkl)
+* TensorFlow / Keras models (.keras)
+* Dual-model respiratory screening pipeline
+* Hybrid feature extraction (Mel spectrogram + handcrafted acoustic features)
+* YAMNet embedding extraction for microphone-based cough analysis
+* Feature scalers (.pkl)
 * Custom audio preprocessing pipeline
 
 ---
@@ -261,8 +264,13 @@ spectrocough_backend/
 │
 ├── requirements.txt
 ├── models/
-│   ├── spectrocough_v1_baseline.keras
-│   └── acoustic_scaler.pkl
+│   ├── Stethscopic/
+│   │   ├── spectrocough_v1_baseline.keras
+│   │   └── acoustic_scaler.pkl
+│   │
+│   └── Normal/
+│       ├── spectrocough_yamnet_fusion_30_epochs.keras
+│       └── scaler_yamnet.pkl
 │
 └── app/
     ├── main.py
@@ -350,7 +358,7 @@ POST /predict
 Request
 
 * Multipart audio file (.wav)
-* audio_type
+* audio_type (`stethoscopic` | `normal`)
 
 Response
 
@@ -386,7 +394,6 @@ GET /model-info
 * Model version tracking
 * Monitoring dashboards
 * Deployment automation
-* Docker containerization
 * Expanded datasets
 * Clinical validation
 
